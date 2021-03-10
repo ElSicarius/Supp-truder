@@ -47,6 +47,7 @@ class Supptruder():
     def shuffle_payload_list(self):
         self.SESSION.Conf.settings_["PROGRAM"].wordlist_shuffle = True
 
+
     # OPTIONNAL: define changes to the payloads
     def set_mutations(self, regex1, regex2):
         self.SESSION.Conf.settings_["PROGRAM"].wordlist_mutations.append((regex1, regex2))
@@ -57,11 +58,6 @@ class Supptruder():
 
     def set_getter(self, status_filter=["any"], length_filter=["any"],\
             length_exclusion=[], time_filter=[]):
-        # OPTIONNAL: define the getter for the results
-        # status_filters : ["200"] or can be range ["200-300"] or ["200-&"]
-        # length_filter : ["1540","0-999"]
-        # length_exclusion : ["1420"]
-        # time_filter : ["15-&"]
         self.SESSION.Conf.settings_["DIFFLIB"].program_status_filter = status_filter
         self.SESSION.Conf.settings_["DIFFLIB"].program_length_filter = length_filter
         self.SESSION.Conf.settings_["DIFFLIB"].program_length_exclusion = length_exclusion
@@ -89,6 +85,7 @@ class Supptruder():
 
     # run the intruder
     def run(self, threads=5, verbosity=3):
+
         self.SESSION.Conf.settings_["PROGRAM"].program_threads = threads
         self.SESSION.Conf.settings_["VERBOSITY"].verbosity = verbosity
         self.SESSION.Conf.update()

@@ -26,7 +26,16 @@ class Session(dict):
         return target
 
     def get_targets(self):
-        return self.TARGETS
+        return self._load_targets()
+
+    def get_method(self):
+        return self.Conf.settings_["REQUEST"].request_method
+
+    def get_data(self):
+        return self.Conf.settings_["PROGRAM"].program_raw_data
+
+    def get_headers(self):
+        return self.Conf.settings_["REQUEST"].request_base_headers
 
     def printcust(self, text, end="\n", v=1, nolog=False):
         """
@@ -36,7 +45,7 @@ class Session(dict):
         if 0 < self.Conf.settings_["VERBOSITY"].verbosity >= v:
             print(text, end=end)
         if not nolog:
-            log_this(text, self.Conf.settings_["FILES"].files_log_var,\
+            log_this(text, self.Conf.settings_["FILES"].files_full_log_var,\
              self.Conf.settings_["COLORS"].color_list)
 
     def get_extra_data(self):

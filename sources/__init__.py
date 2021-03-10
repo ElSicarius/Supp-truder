@@ -16,7 +16,7 @@ def main():
     # change the replace_string caracter that will be used later
     intruder.change_replace_string("§")
     # init target with optional params
-    intruder.set_target("https://127.0.0.1:9960/§",\
+    intruder.set_target("https://elsicarius.fr/§",\
      base_payload="FuzzingYourApp", data=None, base_request_match=False,\
      ignore_base_request=False)
 

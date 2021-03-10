@@ -111,7 +111,7 @@ class Settings(dict):
     @staticmethod
     def _process_program_options(module):
         # nothing now
-
+        
         module.program_extra_data = utils.load_raw_data(module.program_raw_data)
 
         return module
