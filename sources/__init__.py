@@ -10,7 +10,7 @@ def main():
     """
     Main process of supptruder
     """
-    print(f"\n{color_banner}~~ Pelleteuze v{__version__}, made with love by {__author__} ~~{color_end}")
+    print(f"\n{color_banner}~~ Supp'Truder v{__version__}, made with love by {__author__} ~~{color_end}")
     intruder = Supptruder()
 
     # change the replace_string caracter that will be used later
