@@ -10,6 +10,7 @@ class Target(dict):
         self.REPLACESTR = replaceStr
         if not self.LOCATIONS:
             self.locate_replacestr()
+        print(f"Located {self.LOCATIONS}")
 
     def replace_locate(self, replace_with):
         for location in self.LOCATIONS:

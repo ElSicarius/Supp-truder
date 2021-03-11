@@ -23,7 +23,7 @@ def main():
     # OPTIONNAL: specify a different method
     intruder.set_method("POST")
     # set the payload file
-    intruder.set_payloadfile("%%DATABASE%%/fuzz1.txt", offset=0)
+    intruder.set_payloadfile("%%DATABASE%%/test.txt", offset=0)
     # or use
     #intruder.set_distant_payloadfile("http://somewebsite/", offset=0)
     # or use
@@ -32,8 +32,11 @@ def main():
     intruder.shuffle_payload_list()
 
     # OPTIONNAL: define changes to the payloads
-    intruder.set_mutations(r'.js', ".js.zip")
-    intruder.set_mutations(r'.php',r'.php[0-7]{1}')
+    # use del_original=True if you wan to remove the occurences not modified
+    # don't forget these are regex ! "." != actual "." but means "any caracter"
+    intruder.set_mutations(r'.js', r"\.js\.zip", del_original=True)
+    intruder.set_mutations(r'.php',r'\.php[0-7]{1}')
+    intruder.set_mutations(r'.html',r'\.html[0-2]{1}')
 
     # OPTIONNAL: use a tamperscript
     intruder.use_tamper("base64")

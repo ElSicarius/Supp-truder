@@ -32,6 +32,9 @@ def load_raw_data(raw):
             print("Data given couldn't be understood")
     return data
 
+def regex_gen(regex):
+    return exrex.generate(regex)
+
 def clear_url(url):
     url = urlparse(url)
     return f"{url.netloc}{url.path}"

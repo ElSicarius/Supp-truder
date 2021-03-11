@@ -26,7 +26,7 @@ class Supptruder():
 
     # set the payload file
     def set_payloadfile(self, payload_file_path, offset=0):
-        self.SESSION.Conf.settings_["FILES"].files_wordlist
+        self.SESSION.Conf.settings_["FILES"].files_wordlist = payload_file_path
         self.SESSION.Conf.settings_["PROGRAM"].wordlist_offset = offset
 
     # or use
@@ -49,8 +49,8 @@ class Supptruder():
 
 
     # OPTIONNAL: define changes to the payloads
-    def set_mutations(self, regex1, regex2):
-        self.SESSION.Conf.settings_["PROGRAM"].wordlist_mutations.append((regex1, regex2))
+    def set_mutations(self, regex1, regex2, del_original=False):
+        self.SESSION.Conf.settings_["PROGRAM"].wordlist_mutations.append((regex1, regex2, del_original))
 
     # OPTIONNAL: use a tamperscript
     def use_tamper(self, tampername):
@@ -81,7 +81,7 @@ class Supptruder():
 
     # OPTIONNAL: set logfile
     def save_logs(self, logfile_handler):
-        self.SESSION.Conf.settings_["FILES"].files_output_log = logfile_handler
+        self.SESSION.Conf.settings_["FILES"].files_output_log_var = logfile_handler
 
     # run the intruder
     def run(self, threads=5, verbosity=3):

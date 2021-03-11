@@ -21,8 +21,8 @@ class Settings(dict):
         self.settings_ = self._load_settings(parser)
         self.DATABASE = "./database"
         self.DOMAIN = "test"
-        self._set_magic_vars()
-        self._process_self()
+        #self._set_magic_vars()
+        #self._process_self()
         self.PROXY = self._prepare_proxy()
 
     def __setitem__(self, name, value):
@@ -37,18 +37,20 @@ class Settings(dict):
         self.settings_ = self._process_files_options(self.settings_)
 
     def update(self):
+        self._set_magic_vars()
+        self._process_self()
         return
 
     def _set_magic_vars(self):
         for module in self.settings_:
-            for variable in [v for v in dir(self.settings_[module]) if v[:2] != "__"]:
+            for variable in [v for v in dir(self.settings_[module]) if v[:2] != "__" and not "_var" in v]:
                 value = getattr(self.settings_[module], variable)
                 if "%%DOMAIN%%" in str(value):
                     value = value.replace("%%DOMAIN%%", self.DOMAIN)
                 if "%%DATABASE%%" in str(value):
                     value = value.replace("%%DATABASE%%", self.DATABASE)
                 # live files with content are now named with a "_var" at the end
-                setattr(self.settings_[module], variable+"_var", value)
+                setattr(self.settings_[module], variable + "_var", value)
 
 
     def _prepare_proxy(self):
@@ -76,7 +78,7 @@ class Settings(dict):
         dirname = os.path.dirname(settings["FILES"].files_tampers_path)
         sys.path.insert(0, dirname)
         for file in os.listdir(dirname):
-            if not re.match(r"^[A-Z][A-Z0-9_]+\.py$", file):
+            if not re.match(r"^[A-Za-z0-9_]+\.py$", file):
                 continue
             name = file[:-3]
             module = importlib.import_module(name)
@@ -97,6 +99,7 @@ class Settings(dict):
         # logs handlers
         utils.create_dirs(module.files_full_log_var)
         utils.create_dirs(module.files_output_log_var)
+
         module.files_full_log_var = utils.file_opener(module.files_full_log_var, "a+")
         module.files_output_log_var = utils.file_opener(module.files_output_log_var, "a+")
         # wordlists
@@ -111,7 +114,7 @@ class Settings(dict):
     @staticmethod
     def _process_program_options(module):
         # nothing now
-        
+
         module.program_extra_data = utils.load_raw_data(module.program_raw_data)
 
         return module
@@ -119,12 +122,8 @@ class Settings(dict):
     @staticmethod
     def _process_colors_options(module):
         # nothing now
-        # disable colors here
+        # todo: disable colors here
         return module
-
-    @staticmethod
-    def _isattr(name):
-        return re.match("^[A-Z][A-Z0-9_]+$", name)
 
     @staticmethod
     def _load_settings(parser=None):

@@ -1,8 +1,8 @@
 
-from sources.utils import get_parser
+from sources.utils import get_parser, regex_gen
 import sources.settings as settings
 from sources.utils import log_this
-import sys
+import sys, re
 
 
 class Session(dict):
@@ -31,6 +31,36 @@ class Session(dict):
     def get_method(self):
         return self.Conf.settings_["REQUEST"].request_method
 
+    def get_payloads(self):
+        return self.Conf.settings_["FILES"].files_wordlist_var
+
+    def get_mutations(self):
+        return self.Conf.settings_["PROGRAM"].wordlist_mutations
+
+    def prepare_payloads(self):
+        mutations = self.get_mutations()
+        if not len(mutations)>0:
+            return self.get_payloads()
+        temp_payload = set()
+        payloads_merged = "\n".join(self.get_payloads())
+        final_payloads = set(self.get_payloads())
+        for mutation in mutations:
+            if re.findall(mutation[0], payloads_merged):
+                for payload in self.get_payloads():
+                    if re.findall(mutation[0], payload):
+                        if mutation[2]:
+                            try:
+                                final_payloads.remove(payload)
+                            except:
+                                pass
+                        regex_generated = regex_gen(mutation[1])
+                        for regex in regex_generated:
+                            final_payloads.add(re.sub(mutation[0], regex, payload))
+
+        print("\n".join(final_payloads))
+
+        return
+
     def get_data(self):
         return self.Conf.settings_["PROGRAM"].program_raw_data
 
@@ -47,9 +77,3 @@ class Session(dict):
         if not nolog:
             log_this(text, self.Conf.settings_["FILES"].files_full_log_var,\
              self.Conf.settings_["COLORS"].color_list)
-
-    def get_extra_data(self):
-        return self.Conf.settings_["PROGRAM"].program_raw_data
-
-    def get_current_method(self):
-        return self.Conf.settings_["REQUEST"].request_methods
