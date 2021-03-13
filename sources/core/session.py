@@ -1,7 +1,9 @@
 
 from sources.utils import get_parser, regex_gen
+from sources.utils import Triggers
 import sources.settings as settings
 from sources.utils import log_this
+from sources.settings.COLORS import *
 import sys, re
 
 
@@ -28,6 +30,14 @@ class Session(dict):
     def get_targets(self):
         return self._load_targets()
 
+    def base_req_match(self):
+        return self.Conf.settings_["DIFFLIB"].difflib_ignore_base_request,\
+               self.Conf.settings_["DIFFLIB"].difflib_base_request_match
+
+    def gen_triggers(self):
+        self.triggers = Triggers(self)
+        return self.triggers
+
     def get_method(self):
         return self.Conf.settings_["REQUEST"].request_method
 
@@ -37,10 +47,17 @@ class Session(dict):
     def get_mutations(self):
         return self.Conf.settings_["PROGRAM"].wordlist_mutations
 
+    def get_tamper(self):
+        return self.Conf.settings_["TAMPER"]
+
+    def get_threadscount(self):
+        return int(self.Conf.settings_["PROGRAM"].program_threads)
+
     def prepare_payloads(self):
         mutations = self.get_mutations()
         if not len(mutations)>0:
             return self.get_payloads()
+        self.printcust(f"{color_green}\t[DEBUG] Applying {len(mutations)} mutations to the wordlist !")
         temp_payload = set()
         payloads_merged = "\n".join(self.get_payloads())
         final_payloads = set(self.get_payloads())
@@ -57,9 +74,7 @@ class Session(dict):
                         for regex in regex_generated:
                             final_payloads.add(re.sub(mutation[0], regex, payload))
 
-        print("\n".join(final_payloads))
-
-        return
+        return final_payloads
 
     def get_data(self):
         return self.Conf.settings_["PROGRAM"].program_raw_data

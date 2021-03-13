@@ -14,8 +14,8 @@ program_replace_string = "§"
 program_base_payload = "FuzzingYourApp"
 
 # fuzzing related params
-program_status_filter = list(["any"])
-program_length_filter = list(["any"])
+program_status_filter = list()
+program_length_filter = list()
 program_length_exclusion = list()
 program_time_filter = list()
 

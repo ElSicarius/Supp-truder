@@ -32,6 +32,53 @@ def load_raw_data(raw):
             print("Data given couldn't be understood")
     return data
 
+def is_in_range(references, value):
+    ref_allow, ref_deny = references
+    if len(ref_allow) == 0 and len(ref_deny) == 0:
+        # means that we can't check -> OK
+        return None
+    if len(ref_allow) != 0 :
+        for ref in ref_allow:
+            status = False
+            #print("accept",ref,"for",value)
+            if len(ref) == 1:
+                ref = ref[0]
+
+                if round(float(value),3) == round(float(ref),3):
+                    status = True
+            if len(ref) > 1:
+                if (not ref[0] == "&" and not ref[1] == "&"):
+                    if ( round(float(ref[0]),3) <= round(float(value),3) <= round(float(ref[1]),3) ):
+                        status = True
+                elif ref[0] == "&":
+                    if  ( round(float(value),3) <= round(float(ref[1]),3) ):
+                        status = True
+                elif ref[1] == "&":
+                    if  ( round(float(ref[0]),3) <= round(float(value),3) ):
+                        status = True
+            if status:
+                return status
+    if len(ref_deny) != 0:
+        for ref in ref_deny:
+            status = True
+            #print("deny",ref,"for",value)
+            if len(ref) == 1:
+                ref = ref[0]
+                if round(float(value),3) == round(float(ref),3):
+                    status = False
+            if len(ref) > 1:
+                if (not ref[0] == "&" and not ref[1] =="&"):
+                    if round(float(ref[0]),3) <= round(float(value),3) <= round(float(ref[1]),3):
+                        status = False
+                elif ref[0] == "&":
+                    if round(float(value),3) <= round(float(ref[1]),3):
+                        status = False
+                elif ref[1] == "&":
+                    if round(float(ref[0]),3) <= round(float(value),3):
+                        status = False
+            return status
+    return False
+
 def regex_gen(regex):
     return exrex.generate(regex)
 

@@ -26,7 +26,7 @@ class PrepairedRequest(selfhttp.Request):
         if method == 'GET':
             return self.request_handler(url, method=method, headers=headers)
         else:
-            return self.request_handler(url, method=method, data=formatted_params, headers=headers)
+            return self.request_handler(url, method=method, data=data, headers=headers)
 
 
     def request_handler(self, url, method, data=None, headers=None):

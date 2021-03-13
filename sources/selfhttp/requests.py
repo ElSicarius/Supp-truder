@@ -96,7 +96,7 @@ class Request(dict):
             # get time difference
             time = float((after-now).total_seconds())
             # create Response object based on what we've recieved
-            req = Response(rep.read().decode('utf-8', errors='ignore'), status=rep.status,
+            req = Response(rep.read().decode('utf-8', errors='ignore'),session=self.SESSION, status=rep.status,
                url=rep.url, headers=rep.headers, time=time, bool_status=True, ua=temp_headers["User-Agent"])
 
             # code 429 = rate limit of request
@@ -132,13 +132,13 @@ class Request(dict):
                     rep = http_err
                 after = get_date()
                 time = float((after-now).total_seconds())
-                req = Response(rep.read().decode('utf-8', errors='ignore'), status=rep.status, url=rep.url, headers=rep.headers, time=time, bool_status=True, ua=temp_headers["User-Agent"])
+                req = Response(rep.read().decode('utf-8', errors='ignore'),session=self.SESSION, status=rep.status, url=rep.url, headers=rep.headers, time=time, bool_status=True, ua=temp_headers["User-Agent"])
                 if self.SESSION.Conf.settings_["VERBOSITY"].verbosity_debug:
                     printcust(req, v=40, nolog=True)
                 return req
             if self.SESSION.Conf.settings_["VERBOSITY"].verbosity_debug:
                 self.SESSION.printcust(req, v=40, nolog=True)
-            return Response("", status=0, url=url, time=time, ua=temp_headers["User-Agent"])
+            return Response("",session=self.SESSION, status=0, url=url, time=time, ua=temp_headers["User-Agent"])
 
     def post_(self, url, data, headers=None):
         """
@@ -194,7 +194,7 @@ class Request(dict):
             after = get_date()
             time = float((after-now).total_seconds())
 
-            req = Response(rep.read().decode('utf-8', errors='ignore'), status=rep.status, url=rep.url, headers=rep.headers, time=time, bool_status=True, ua=temp_headers["User-Agent"])
+            req = Response(rep.read().decode('utf-8', errors='ignore'),session=self.SESSION, status=rep.status, url=rep.url, headers=rep.headers, time=time, bool_status=True, ua=temp_headers["User-Agent"])
 
             if req.status_code == 429:
                 self.SESSION.printcust('HTTP 429 - Rate limit reached')
@@ -223,13 +223,13 @@ class Request(dict):
                     rep = http_err
                 after = get_date()
                 time = float((after-now).total_seconds())
-                req = Response(rep.read().decode('utf-8', errors='ignore'), status=rep.status, url=rep.url, headers=rep.headers, time=time, bool_status=True, ua=temp_headers["User-Agent"])
+                req = Response(rep.read().decode('utf-8', errors='ignore'),session=self.SESSION, status=rep.status, url=rep.url, headers=rep.headers, time=time, bool_status=True, ua=temp_headers["User-Agent"])
                 if self.SESSION.Conf.settings_["VERBOSITY"].verbosity_debug:
                     self.SESSION.printcust(req, v=40, nolog=True)
                 return req
             if self.SESSION.Conf.settings_["VERBOSITY"].verbosity_debug:
                 self.SESSION.printcust(req, v=40, nolog=True)
-            return Response("", status=0, url=url, time=time, ua=temp_headers["User-Agent"])
+            return Response("",session=self.SESSION, status=0, url=url, time=time, ua=temp_headers["User-Agent"])
 
 
     def go_time_and_request(self):

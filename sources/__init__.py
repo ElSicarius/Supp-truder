@@ -21,9 +21,9 @@ def main():
      ignore_base_request=False)
 
     # OPTIONNAL: specify a different method
-    intruder.set_method("POST")
+    intruder.set_method("GET")
     # set the payload file
-    intruder.set_payloadfile("%%DATABASE%%/test.txt", offset=0)
+    intruder.set_payloadfile("%%DATABASE%%/fuzz1.txt", offset=0)
     # or use
     #intruder.set_distant_payloadfile("http://somewebsite/", offset=0)
     # or use
@@ -34,20 +34,26 @@ def main():
     # OPTIONNAL: define changes to the payloads
     # use del_original=True if you wan to remove the occurences not modified
     # don't forget these are regex ! "." != actual "." but means "any caracter"
-    intruder.set_mutations(r'.js', r"\.js\.zip", del_original=True)
-    intruder.set_mutations(r'.php',r'\.php[0-7]{1}')
-    intruder.set_mutations(r'.html',r'\.html[0-2]{1}')
+
+    intruder.set_mutations(r'\.js', r"\.js\.zip", del_original=False)
+    intruder.set_mutations(r'\.php',r'\.php[0-3]{1}', del_original=False)
+    intruder.set_mutations(r'\.html',r'\.html[0-1]{1}', del_original=False)
 
     # OPTIONNAL: use a tamperscript
-    intruder.use_tamper("base64")
+    """
+    intruder.use_tamper("base64")"""
 
     # OPTIONNAL: define the getter for the results
+    # filters folow the rules: ['singlevalue', 'min-max']
+    # single_value can be : 200 or n200 or 50x or n50x
+    # cannot be: 5xx or 5n02 sorry :(
+    # n means "not" and x means "any"
     # status_filters : ["200"] or can be range ["200-300"] or ["200-&"]
     # length_filter : ["1540","0-999"]
     # length_exclusion : ["1420"]
     # time_filter : ["15-&"]
 
-    intruder.set_getter(status_filter=["any"], length_filter=["any"],\
+    intruder.set_getter(status_filter=["n50x"], length_filter=[],\
                     length_exclusion=[], time_filter=[])
 
     # OPTIONNAL: update the settings for the requests
@@ -63,5 +69,5 @@ def main():
     intruder.save_logs(open("mylogfile", "a+"))
 
     # run the intruder
-    intruder.run(threads=5, verbosity=3)
+    intruder.run(threads=3, verbosity=3)
     print(intruder.results())

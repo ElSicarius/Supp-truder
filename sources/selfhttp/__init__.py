@@ -4,6 +4,6 @@ from .response import Response
 from .proxy import Proxy
 from .target import Target
 
-from .pltzdifflib import DiffLibrary
+from .suppdifflib import DiffLibrary
 # temp
 from .utils import *

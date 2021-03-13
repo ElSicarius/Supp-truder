@@ -16,7 +16,7 @@ class DiffLibrary():
         """
         keep some args from settings
         """
-        super().__init__(session)
+
         self.SESSION = session
         # shortcuts from config
         self.verbosity = self.SESSION.Conf.settings_["VERBOSITY"].verbosity
@@ -25,7 +25,6 @@ class DiffLibrary():
         self.difftimer = self.SESSION.Conf.settings_["DIFFLIB"].difflib_difftimer
         self.del_tag = self.SESSION.Conf.settings_["DIFFLIB"].difflib_delete_html_tag
         self.debug = self.SESSION.Conf.settings_["VERBOSITY"].verbosity
-        self.digfurther = self.SESSION.Conf.settings_["PROGRAM"].program_dig_further_brothers
         self.del_line = None
 
 

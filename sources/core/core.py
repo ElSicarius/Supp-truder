@@ -58,10 +58,10 @@ class Supptruder():
 
     def set_getter(self, status_filter=["any"], length_filter=["any"],\
             length_exclusion=[], time_filter=[]):
-        self.SESSION.Conf.settings_["DIFFLIB"].program_status_filter = status_filter
-        self.SESSION.Conf.settings_["DIFFLIB"].program_length_filter = length_filter
-        self.SESSION.Conf.settings_["DIFFLIB"].program_length_exclusion = length_exclusion
-        self.SESSION.Conf.settings_["DIFFLIB"].program_time_filter = time_filter
+        self.SESSION.Conf.settings_["PROGRAM"].program_status_filter = status_filter
+        self.SESSION.Conf.settings_["PROGRAM"].program_length_filter = length_filter
+        self.SESSION.Conf.settings_["PROGRAM"].program_length_exclusion = length_exclusion
+        self.SESSION.Conf.settings_["PROGRAM"].program_time_filter = time_filter
 
     # OPTIONNAL: update the settings for the requests
     def customize_requests(self, timeout=20, allow_redirects=False,\

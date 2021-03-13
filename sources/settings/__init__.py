@@ -52,7 +52,6 @@ class Settings(dict):
                 # live files with content are now named with a "_var" at the end
                 setattr(self.settings_[module], variable + "_var", value)
 
-
     def _prepare_proxy(self):
         return Proxy(self.settings_["REQUEST"].request_proxy)
 
