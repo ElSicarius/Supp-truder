@@ -8,6 +8,35 @@ That's where Supp'truder comes: It provides a unique set of tools to pre-process
 
 If you're interested in seeing what the tool can do, look at the examples section.
 
+# Install
+## docker
+### Hub:
+```bash
+alias supptruder="docker run -it --rm elsicarius/supptruder:latest"
+supptruder <args>
+```
+
+### Sources
+
+```bash
+sudo apt install git
+git clone git@github.com:ElSicarius/Supp-truder.git
+
+cd Supp-truder/docker
+docker-compose build
+docker run -it --rm supptruder:latest
+```
+
+## From sources
+```bash
+sudo apt install git python3.10 python3-pip virtualenv
+git clone git@github.com:ElSicarius/Supp-truder.git
+cd Supp-truder
+virtualenv -p .py3 python3.10
+source .py3/bin/activate
+python3 -m pip install -r requirements.txt
+```
+
 # Examples
 
 This is where you can see what the tool is capable of, I'm going to define a use case/problem, and a way to use the tool in order to solve the case:
@@ -21,6 +50,30 @@ This is where you can see what the tool is capable of, I'm going to define a use
 -B -> Makes a base request and matches the responses that does not "look like" the base request (or in the other way with the parameter -m, ie match a very specific response)
 
 -T -> use a "tamper" script that will do some pre-processing to your payload !
+
+## Filters
+
+### All in one
+Lets say you want to keep all the responses that have a content-length > 3000, a response time < 3 seconds and a status code in the 20x (ie 200, 201,202...), thats simple:
+
+Command:
+```bash
+python3 supptruder.py -u "https://site.com/§" -p database/paths_medium.txt -f 20x -tf "<3" -lf ">3000" 
+```
+### Other examples
+```
+-f n200 -> exclude all the statuses 200 from the output
+-f n30X -f n40x -> exclude all the 300-399 ans 400-499 statuses from the output
+
+-tf ">=3" -> match the responses that have a response time > or equal to 3 seconds
+-tf "<=3" -> match the responses that have a response time < or equal to 3 seconds
+-tf "=3" -> match the responses that have a response equal to 3 seconds (useless feature I know)
+
+-lf ">=3000" -> match the responses that have a response length > or equal to 3000 
+-lf "<=3000" -> match the responses that have a response length < or equal to 3000 
+-lf "=3" -> match the responses that have a response length equal to 3000
+
+```
 
 ## Database/payloads
 ### Local payload
@@ -107,6 +160,7 @@ That's it !
 
 # Todo
 - Add Tampers scripts
+- Use the verbosity system
 - Improve the code
-- fix some bugs
-- enjoy the free time this tool gave me
+- Fix some bugs
+- Enjoy the free time this tool gave me
