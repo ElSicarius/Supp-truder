@@ -40,19 +40,21 @@ class Empty_response():
 
 class Requests():
 
-    headers = {}
+    headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36"}
 
-    def __init__(self, method="GET", timeout=60, throttle=0.0, allow_redirects=False, verify_ssl=False, retry=False) -> None:
+    def __init__(self, method="GET", timeout=60, throttle=0.0, allow_redirects=False, verify_ssl=False, retry=False, headers={}) -> None:
         self.session = requests.Session()
         self.method = method
         self.timeout = timeout
         self.throttle = throttle
         self.allow_redirects = allow_redirects
         self.verify_ssl = verify_ssl
+        self.headers.update({k.lower(): v for k,v in headers.items()})
 
         self.errors_count = 0
         self.retry_count = 0
         self.retry = retry
+
         self.disable_warning()
     
     @staticmethod
@@ -99,23 +101,23 @@ class Requests():
         if self.throttle > 0.0:
             time.sleep(self.throttle)
 
-        temp_headers = self.headers.update(headers)
-
+        self.headers.update({k.lower(): v for k,v in headers.items()})
         retry = True
 
         try:
             req = self.session.get(url, timeout=self.timeout, allow_redirects=self.allow_redirects,
-                    verify=self.verify_ssl, headers=temp_headers)
+                    verify=self.verify_ssl, headers=self.headers)
             if req.status_code == 429:
                 log(
                     f"Rate limit reached, increase --throttle! Current is {self.throttle}", type="warning")
-        except:
+        except Exception as e:
+            print(e)
             self.errors_count += 1
             req = None
             if self.retry and retry:
                 try:
                     req = self.session.get(url, timeout=self.timeout, allow_redirects=self.allow_redirects,
-                            verify=self.verify_ssl, headers=temp_headers)
+                            verify=self.verify_ssl, headers=self.headers)
                     if req.status_code == 429:
                         log(
                             f"Rate limit reached, increase --throttle! Current is {self.throttle}", type="warning")
@@ -137,13 +139,13 @@ class Requests():
         if self.throttle > 0.0:
             time.sleep(self.throttle)
 
-        temp_headers = self.headers.update(headers)
+        self.headers.update({k.lower(): v for k,v in headers.items()})
 
         retry = True
 
         try:
             req = self.session.post(url, data=data, timeout=self.timeout, allow_redirects=self.allow_redirects,
-                    verify=self.verify_ssl, headers=temp_headers)
+                    verify=self.verify_ssl, headers=self.headers)
             if req.status_code == 429:
                 log(
                     f"Rate limit reached, increase --throttle! Current is {self.throttle}", type="warning")
@@ -153,7 +155,7 @@ class Requests():
             if self.retry and retry:
                 try:
                     req = self.session.post(url, data=data, timeout=self.timeout, allow_redirects=self.allow_redirects,
-                            verify=self.verify_ssl, headers=temp_headers)
+                            verify=self.verify_ssl, headers=self.headers)
                     if req.status_code == 429:
                         log(
                             f"Rate limit reached, increase --throttle! Current is {self.throttle}", type="warning")

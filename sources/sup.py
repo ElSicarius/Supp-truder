@@ -1,12 +1,14 @@
 
 
 import argparse
+from distutils.log import error
 from email.mime import base 
 import os
 import re
 import requests
 from datetime import datetime
 import random 
+import signal
 import sys
 
 from loguru import logger
@@ -21,12 +23,11 @@ class Arguments():
         """
         Get arguments from command line.
         """
-        parser = argparse.ArgumentParser(description='Supptruder, like SuperTruder but better')
+        parser = argparse.ArgumentParser(description='~~~~~~~~~~ WASSUP Website ?? ~~~~~~~~~~')
         # Fuzzing stuff
         parser.add_argument('-u', "--url", help='Url to test',)
         parser.add_argument("-d", "--data", default=None, help="Add POST data")
-        parser.add_argument("-H", "--headers", default={},
-                             help="Add extra Headers (syntax: \"header: value\\nheader2: value2\")")
+        parser.add_argument("-H", "--headers", default=None, action="append", help="Add extra Headers (syntax: -H \"test: test\" -H \"test2: test3\")")
         parser.add_argument("-S", "--placeholder", default="§")
 
         # tool settings
@@ -55,50 +56,14 @@ class Arguments():
         parser.add_argument("-B", "--use-base-request", help="Use the strategy to compare responses agains a base request to reduce noise",action="store_true", default=False)
         parser.add_argument('-b', "--base-payload",help="Payload for base request", default="Fuzzing")
         parser.add_argument("--ignore-base-request", default=False, action="store_true", help="Force testing even if base request failed")
-        parser.add_argument("-timed", "--time-difference", default=1, type=int, help="Define a time difference where base_request will not be equal to the current_request, ie base request took 1 second and current took 2 seconds, they are different until time_different>=1")
-        parser.add_argument("-textd", "--text-difference-ratio", default=0.98, type=float, help="Define a text difference where base_request.text will not be equal to the current_request.text, ie base_request matches current_request at 98%, they are different until time_different>=0.98")
-        parser.add_argument("--ratio-type", default="quick", help="Use a quick ratio of a normal one, quick is fatser, normal is for very short pages")
+        parser.add_argument("-timed", "--time-difference", default=2, type=int, help="Define a time difference where base_request will not be equal to the current_request, ie base request took 1 second and current took 2 seconds, they are different until time_different>=1")
+        parser.add_argument("-textd", "--text-difference-ratio", default=0.98, type=float, help="Define a text difference where base_request.text will not be equal to the current_request.text, ie base_request matches current_request at 98%%, they are different until time_different>=0.98")
+        parser.add_argument("--ratio-type", default="quick", help="Use a quick ratio of a normal one, quick is faster, normal is for very short pages")
         parser.add_argument("-m", '--match-base-request',action="store_true", default=False, help="Match the base request to find pages identical to your base payload")
 
-        # 
-        # parser.add_argument('-b', "--basePayload",
-        #                     help="Payload for base request", default="Fuzzing")
-        # 
-
-        # # Sorting stuff
-        #
-        # parser.add_argument("-m", '--matchBaseRequest',
-        #                     action="store_true", default=False)
-        # parser.add_argument("-el", "--excludeLength",
-        #                     help='Specify the len range that we\'ll use to deny responses (eg: 0,999 or any, if 3 values, we\'ll refuse EXACTLY this values)', default="none,none")
-        # parser.add_argument(
-        #     "-t", "--timeFilter", help='Specify the time range that we\'ll use to accept responses (eg: 0,999 or any, if 3 values, we\'ll accept EXACTLY this values)', default="any,any")
-
-        # # misc stuff
         # parser.add_argument('-o', '--dumpHtml', help='file to dump html content')
-
-        # # request stuff
-        # 
-        # 
-        # parser.add_argument(
-        #     "--throttle", help="throttle between the requests", default=0.01)
-        # parser.add_argument("--verify", default=False, action="store_true")
-
-        # # program functionnalities
-        # parser.add_argument(
-        #     "--difftimer", help="Change the default matching timer (default 2000ms -> 2 seconds)", default=2000)
-        # parser.add_argument(
-        #     "--textDifference", help="Percentage difference to match pages default: 99%%", default=0.99)
-        # parser.add_argument("--quickRatio", help="Force quick ratio of pages (a bit faster)",
-        #                     action="store_true", default=False)
-        # parser.add_argument("--threads", default=5)
-        # parser.add_argument("--ignoreBaseRequest", default=False,
-        #                     action="store_true", help="Force testing even if base request failed")
-        # parser.add_argument("--uselessprint", help="Disable useless self-rewriting print (with '\\r')",
-        #                     default=False, action="store_true")
         # parser.add_argument("-q", "--quiet", help="tell the program to output only the results",
         #                     default=False, action="store_true")
-        # parser.add_argument("-v",'--verbosity', help="Change the verbosity of the program (available: 1,2,3)", default=2)
         self.args = parser.parse_args()
         return self.validate_arguments()
 
@@ -107,16 +72,18 @@ class Arguments():
         Validate arguments.
         """
         if self.args.url is None:
-            print("[!] You must specify a url to test")
+            log("[!] You must specify a url to test (-u) !", type="fatal")
             exit(1)
         if self.args.payload is None and self.args.regex_payload is None and self.args.distant_payload is None:
-            print("[!] You must specify a payload file")
+            log("[!] You must specify a payload file (-p) or a regex (-R) or a distant payload (-P) !", type="fatal")
             exit(1)
 
         if self.args.tamper:
             self.tamper = self.args.tamper
             self.args.tamper = self.load_tamper(self.args.tamper)
             self.check_tamper()
+        
+        self.load_headers()
 
         return self.args
     
@@ -145,6 +112,20 @@ class Arguments():
             exit(1)
         else:
             return load
+    
+    def load_headers(self,):
+        """
+        Load headers from the file.
+        """
+        headers_temp = dict()
+        if self.args.headers is not None:
+            for header in self.args.headers:
+                if ":" in header:
+                    key, value = header.split(": ")
+                    headers_temp[key] = value
+                else:
+                    headers_temp[header] = str()
+        self.args.headers = headers_temp
     
     def check_tamper(self):
         try:
@@ -257,7 +238,14 @@ class Fuzzer():
         self.arguments_object = args
         self.args = self.arguments_object.get_arguments()
         self.arguments_object.find_place()
-        self.requests = Requests(method="GET", timeout=60, throttle=0.0, allow_redirects=False, verify_ssl=False, retry=False)
+        self.requests = Requests(
+                    method=self.args.method, 
+                    timeout=self.args.timeout, 
+                    throttle=self.args.throttle, 
+                    allow_redirects=self.args.allow_redirects, 
+                    verify_ssl=self.args.verify_ssl, 
+                    retry=self.args.retry,
+                    headers=self.args.headers)
         self.start_date = datetime.now()
 
     def gen_wordlist(self):
@@ -316,6 +304,12 @@ class Fuzzer():
             )
     
     def run(self):
+        @staticmethod
+        def signal_handler(sig, frame):
+            log(f"Caught ctrl+c, stopping...", type="warning")            
+            exit(1)
+        signal.signal(signal.SIGINT, signal_handler)
+
         self.print(1, Strings.results_header, color="white")
         responses = self.intruder.start_requests()
         for status, response, parameter in responses:
