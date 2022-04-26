@@ -1,0 +1,12 @@
+certifi==2021.10.8
+cffi==1.15.0
+charset-normalizer==2.0.12
+colored==1.4.3
+cryptography==36.0.2
+exrex==0.10.5
+idna==3.3
+loguru==0.6.0
+pycparser==2.21
+PyJWT==2.3.0
+requests==2.27.1
+urllib3==1.26.9

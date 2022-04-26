@@ -1,0 +1,9 @@
+version: "3.3"
+services:
+  supptruder:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    image: supptruder:latest
+    privileged: False
+    
