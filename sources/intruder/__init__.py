@@ -1,2 +1,0 @@
-
-from .intruder import Intruder
