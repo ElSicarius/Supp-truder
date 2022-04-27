@@ -36,7 +36,6 @@ class Request():
             for key, value in self.headers.items():
                 new_headers[key.replace(self.placeholder, self.parameter)] = value.replace(self.placeholder, self.parameter)
             self.headers = new_headers
-        print(self.place)
 
 class Empty_response():
     status_code = 000
@@ -65,7 +64,6 @@ class Raw_Request():
         self.url = str()
     
     def build_url(self):
-        print(self.base_url)
         if self.base_url is None:
             log("No base url provided, using the host header... in http mode (change the default mode to https with the flag --force-ssl)", type="debug")
             if not "host" in self.headers.keys():
@@ -176,7 +174,6 @@ class Requests():
         self.headers.update({k.lower(): v for k,v in headers.items()})
         retry = True
 
-        print(self.headers)
         try:
             req = self.session.get(url, data=data, timeout=self.timeout, allow_redirects=self.allow_redirects,
                     verify=self.verify_ssl, headers=self.headers)
@@ -184,7 +181,7 @@ class Requests():
                 log(
                     f"Rate limit reached, increase --throttle! Current is {self.throttle}", type="warning")
         except Exception as e:
-            print(e)
+            print(f"HTTP Error: {e}")
             self.errors_count += 1
             req = None
             if self.retry and retry:
@@ -223,7 +220,7 @@ class Requests():
                 log(
                     f"Rate limit reached, increase --throttle! Current is {self.throttle}", type="warning")
         except Exception as e:
-            print(e)
+            print(f"HTTP Error: {e}")
             self.errors_count += 1
             req = None
             if self.retry and retry:

@@ -46,9 +46,9 @@ class Arguments():
         parser.add_argument('-p', "--payload", help='payload file',default=None)
         parser.add_argument("--prefix", help='Prefix for all elements of the wordlist',default=str())
         parser.add_argument("--suffix", help='Suffix for all elements of the wordlist',default=str())
-        parser.add_argument("--offset", help='Offset to start from in the wordlist',default=0)
-        parser.add_argument("--timeout", default=20)
-        parser.add_argument("--retry", default=False)
+        parser.add_argument("--offset", help='Offset to start from in the wordlist',default=0, type=int)
+        parser.add_argument("--timeout", default=20, type=int)
+        parser.add_argument("--retry", default=False, action="store_true")
         parser.add_argument("--verify-ssl", default=False, action="store_true")
         parser.add_argument("-X", "--method", default="GET", help="HTTP method to use")
         parser.add_argument("-f", "--filter", help="Filter positives match with httpcode,to exclude one, prefix \"n\", examples: -f n204 -f n403", action="append", default=[])
@@ -301,7 +301,7 @@ class Fuzzer():
             self.args.method = method
             self.args.url = url
             self.args.headers.update(headers)
-            self.args.data = data
+            self.args.data = data if not self.args.data else self.args.data
 
             self.requests = Requests(
                     method=self.args.method, 
