@@ -1,5 +1,6 @@
 from curses import raw
 from email.mime import base
+from shutil import ExecError
 import requests
 import time
 
@@ -63,7 +64,6 @@ class Raw_Request():
         self.url = str()
     
     def build_url(self):
-        print(self.base_url)
         if self.base_url is None:
             log("No base url provided, using the host header... in http mode (change the default mode to https with the flag --force-ssl)", type="debug")
             if not "host" in self.headers.keys():
@@ -181,7 +181,7 @@ class Requests():
                 log(
                     f"Rate limit reached, increase --throttle! Current is {self.throttle}", type="warning")
         except Exception as e:
-            print(e)
+            print(f"HTTP Error: {e}")
             self.errors_count += 1
             req = None
             if self.retry and retry:
@@ -210,7 +210,7 @@ class Requests():
             time.sleep(self.throttle)
 
         self.headers.update({k.lower(): v for k,v in headers.items()})
-
+        
         retry = True
 
         try:
@@ -219,7 +219,8 @@ class Requests():
             if req.status_code == 429:
                 log(
                     f"Rate limit reached, increase --throttle! Current is {self.throttle}", type="warning")
-        except:
+        except Exception as e:
+            print(f"HTTP Error: {e}")
             self.errors_count += 1
             req = None
             if self.retry and retry:

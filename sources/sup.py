@@ -46,9 +46,9 @@ class Arguments():
         parser.add_argument('-p', "--payload", help='payload file',default=None)
         parser.add_argument("--prefix", help='Prefix for all elements of the wordlist',default=str())
         parser.add_argument("--suffix", help='Suffix for all elements of the wordlist',default=str())
-        parser.add_argument("--offset", help='Offset to start from in the wordlist',default=0)
-        parser.add_argument("--timeout", default=20)
-        parser.add_argument("--retry", default=False)
+        parser.add_argument("--offset", help='Offset to start from in the wordlist',default=0, type=int)
+        parser.add_argument("--timeout", default=20, type=int)
+        parser.add_argument("--retry", default=False, action="store_true")
         parser.add_argument("--verify-ssl", default=False, action="store_true")
         parser.add_argument("-X", "--method", default="GET", help="HTTP method to use")
         parser.add_argument("-f", "--filter", help="Filter positives match with httpcode,to exclude one, prefix \"n\", examples: -f n204 -f n403", action="append", default=[])
@@ -116,7 +116,6 @@ class Arguments():
             exit(1)
     
         self.load_headers()
-
         return self.args
     
     def find_place(self):
@@ -181,13 +180,13 @@ class Arguments():
 
 class Wordlist():
     def __init__(self, 
-                        mode, 
-                        link=None, 
-                        tamper=None, 
-                        shuffle=False, 
-                        offset=0, 
-                        prefix="", 
-                        suffix=""):
+                    mode, 
+                    link=None, 
+                    tamper=None, 
+                    shuffle=False, 
+                    offset=0, 
+                    prefix="", 
+                    suffix=""):
         self.mode = mode
         self.link = link
         self.tamper = tamper
@@ -296,11 +295,13 @@ class Fuzzer():
             raw_request_parsed = Raw_Request(self.args.raw_request, self.args.url_raw, self.args.force_ssl)
             raw_request_parsed.parse_raw_request()
             raw_request_parsed.build_url()
-
-            print(raw_request_parsed)
-
-            self.args.method, self.args.url, self.args.headers, self.args.data = \
+            method, url, headers, data = \
                  raw_request_parsed.method, raw_request_parsed.url, raw_request_parsed.headers, raw_request_parsed.data
+            
+            self.args.method = method
+            self.args.url = url
+            self.args.headers.update(headers)
+            self.args.data = data if not self.args.data else self.args.data
 
             self.requests = Requests(
                     method=self.args.method, 
@@ -309,7 +310,7 @@ class Fuzzer():
                     allow_redirects=self.args.allow_redirects, 
                     verify_ssl=self.args.verify_ssl, 
                     retry=self.args.retry,
-                    headers=self.args.headers)
+                    headers={k: v for k,v in self.args.headers.items() if not self.args.placeholder in v and not self.args.placeholder in k})
 
     def gen_wordlist(self):
         if self.args.payload is not None:
