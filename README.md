@@ -51,6 +51,8 @@ This is where you can see what the tool is capable of, I'm going to define a use
 
 -T -> use a "tamper" script that will do some pre-processing to your payload !
 
+-r -> Load a file containing a simple request (GET or POST), then you can eather put your placeholder in the file. if you combine it with -H you can add/overwrite headers, if you add -d, you'll overwrite the POST data.
+
 ## Filters
 
 ### All in one
@@ -157,6 +159,20 @@ The -B option enables the base request feature
 
 That's it !
 
+## Misc
+So, in this case, you have a complex request with a ton of cookies and headers, and a huge data set. You can easily create a super complex command ans use it, or you can simply dump the request into a file, and process it with -r.
+
+Command:
+```bash
+python3 supptruder.py -r request_file.txt -p database/payload.txt --force-ssl
+```
+
+There are a lot of new options, like the fact that you can send a request to a specific url and Fuzz the host header:
+
+Command:
+```bash
+python3 supptruder.py -r request_file.txt -ur https://site.com/ -p database/vhosts.txt -H "Host: §"
+```
 
 # Todo
 - Add Tampers scripts
