@@ -116,7 +116,6 @@ class Arguments():
             exit(1)
     
         self.load_headers()
-
         return self.args
     
     def find_place(self):
@@ -181,13 +180,13 @@ class Arguments():
 
 class Wordlist():
     def __init__(self, 
-                        mode, 
-                        link=None, 
-                        tamper=None, 
-                        shuffle=False, 
-                        offset=0, 
-                        prefix="", 
-                        suffix=""):
+                    mode, 
+                    link=None, 
+                    tamper=None, 
+                    shuffle=False, 
+                    offset=0, 
+                    prefix="", 
+                    suffix=""):
         self.mode = mode
         self.link = link
         self.tamper = tamper

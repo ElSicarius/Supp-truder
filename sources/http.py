@@ -1,5 +1,6 @@
 from curses import raw
 from email.mime import base
+from shutil import ExecError
 import requests
 import time
 
@@ -35,6 +36,7 @@ class Request():
             for key, value in self.headers.items():
                 new_headers[key.replace(self.placeholder, self.parameter)] = value.replace(self.placeholder, self.parameter)
             self.headers = new_headers
+            print(self.headers)
 
 class Empty_response():
     status_code = 000
@@ -119,7 +121,7 @@ class Requests():
         self.throttle = throttle
         self.allow_redirects = allow_redirects
         self.verify_ssl = verify_ssl
-        self.headers.update({k.lower(): v for k,v in headers.items()})
+        # self.headers.update({k.lower(): v for k,v in headers.items()})
 
         self.errors_count = 0
         self.retry_count = 0
@@ -174,6 +176,7 @@ class Requests():
         self.headers.update({k.lower(): v for k,v in headers.items()})
         retry = True
 
+        print(self.headers)
         try:
             req = self.session.get(url, data=data, timeout=self.timeout, allow_redirects=self.allow_redirects,
                     verify=self.verify_ssl, headers=self.headers)
@@ -210,7 +213,7 @@ class Requests():
             time.sleep(self.throttle)
 
         self.headers.update({k.lower(): v for k,v in headers.items()})
-
+        
         retry = True
 
         try:
@@ -219,7 +222,8 @@ class Requests():
             if req.status_code == 429:
                 log(
                     f"Rate limit reached, increase --throttle! Current is {self.throttle}", type="warning")
-        except:
+        except Exception as e:
+            print(e)
             self.errors_count += 1
             req = None
             if self.retry and retry:
