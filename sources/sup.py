@@ -103,6 +103,17 @@ class Arguments():
         ) > 1:
             log("You've specified more that one method to make requests, that's dump :/ -u OR -r!", type="critical")
             exit(1)
+        
+        if len(
+            set(filter(None, [
+                self.args.regex_payload,
+                self.args.distant_payload,
+                self.args.payload
+            ])
+            )
+        ) > 1:
+            log("You've specified more that one method to define payloads, that's dump :/ -p OR -R OR -P!", type="critical")
+            exit(1)
     
         self.load_headers()
 
