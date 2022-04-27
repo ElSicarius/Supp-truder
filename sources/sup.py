@@ -1,6 +1,7 @@
 
 
 import argparse
+from curses import raw
 from distutils.log import error
 from email.mime import base 
 import os
@@ -14,7 +15,7 @@ import sys
 from loguru import logger
 
 from .printing import print, log, Strings
-from .http import Requests, Request, Empty_response
+from .http import Requests, Request, Empty_response, Raw_Request
 from .intruder import Intruder
 
 class Arguments():
@@ -26,16 +27,20 @@ class Arguments():
         parser = argparse.ArgumentParser(description='~~~~~~~~~~ WASSUP Website ?? ~~~~~~~~~~')
         # Fuzzing stuff
         parser.add_argument('-u', "--url", help='Url to test',)
+        parser.add_argument('-r', "--raw-request", help='Raw request prepared with the placeholder',)
         parser.add_argument("-d", "--data", default=None, help="Add POST data")
         parser.add_argument("-H", "--headers", default=None, action="append", help="Add extra Headers (syntax: -H \"test: test\" -H \"test2: test3\")")
         parser.add_argument("-S", "--placeholder", default="§")
+        parser.add_argument("--force-ssl", default=False, help="Force https when using raw-request", action="store_true")
+        parser.add_argument("-ur", "--url-raw", default=None, help="Force usage of a specific URL to make the raw request. Default: Using the Host header")
+
 
         # tool settings
         parser.add_argument("--shuffle", help="Shuffle the payload list", default=False, action="store_true")
         parser.add_argument('-v', '--verbosity', action='count', default=1, help='verbosity level (3 levels available)')
         parser.add_argument('-t', '--threads', type=int, default=10, help='number of threads to use, default 10')
         parser.add_argument("--throttle", help="throttle between the requests, default 0.0", default=0, type=int)
-        parser.add_argument('-r', "--allow-redirects", default=False, action="store_true", help='Allow HTTP redirects')
+        parser.add_argument('-re', "--allow-redirects", default=False, action="store_true", help='Allow HTTP redirects')
         parser.add_argument('-P', "--distant-payload", default=None, help="use an online wordlist instead of a local one (do not use if your internet connection is shit, or the wordlist weight is like To)")
         parser.add_argument("-R", "--regex-payload", help="use a regex to create your payload list", default=None)
         parser.add_argument('-p', "--payload", help='payload file',default=None)
@@ -71,18 +76,34 @@ class Arguments():
         """
         Validate arguments.
         """
-        if self.args.url is None:
-            log("[!] You must specify a url to test (-u) !", type="fatal")
+        if self.args.url is None and self.args.raw_request is None:
+            log("[!] You must specify a url to test (-u) or a request file (-r) !", type="fatal")
             exit(1)
         if self.args.payload is None and self.args.regex_payload is None and self.args.distant_payload is None:
             log("[!] You must specify a payload file (-p) or a regex (-R) or a distant payload (-P) !", type="fatal")
             exit(1)
-
         if self.args.tamper:
             self.tamper = self.args.tamper
             self.args.tamper = self.load_tamper(self.args.tamper)
             self.check_tamper()
+        if self.args.raw_request is not None:
+            try:
+                with open(self.args.raw_request) as f:
+                    self.args.raw_request = f.read()
+            except Exception as e:
+                log(f"Failed to open the raw request file !", type="critical")
+                exit(1)
         
+        if len(
+            set(filter(None, [
+                self.args.url,
+                self.args.raw_request
+            ])
+            )
+        ) > 1:
+            log("You've specified more that one method to make requests, that's dump :/ -u OR -r!", type="critical")
+            exit(1)
+    
         self.load_headers()
 
         return self.args
@@ -94,10 +115,18 @@ class Arguments():
         self.place = list()
         if self.args.data is not None and self.args.placeholder in self.args.data:
             self.place.append("data")
-        elif self.args.placeholder in self.args.url:
+        if self.args.url is not None and self.args.placeholder in self.args.url or\
+             self.args.url_raw is not None and self.args.placeholder in self.args.url_raw:
             self.place.append("url")
-        elif self.args.placeholder in self.args.headers:
+        if self.args.placeholder in "".join([k+v for k,v in self.args.headers.items()]):
             self.place.append("headers")
+        if self.args.raw_request is not None and self.args.placeholder in self.args.raw_request:
+            # defined later when parsing
+            self.place.append("raw")
+        
+        if len(self.place) == 0:
+            log(f"You mush specify the placeholder \"{self.args.placeholder}\" where you're trying to fuzz !", type="critical")
+            exit(1)
  
     def load_tamper(self, module):
         module_path = f"tampers.{module}"
@@ -238,7 +267,12 @@ class Fuzzer():
         self.arguments_object = args
         self.args = self.arguments_object.get_arguments()
         self.arguments_object.find_place()
-        self.requests = Requests(
+        self.start_date = datetime.now()
+        self.load_request()
+    
+    def load_request(self,):
+        if self.args.url is not None:
+            self.requests = Requests(
                     method=self.args.method, 
                     timeout=self.args.timeout, 
                     throttle=self.args.throttle, 
@@ -246,7 +280,25 @@ class Fuzzer():
                     verify_ssl=self.args.verify_ssl, 
                     retry=self.args.retry,
                     headers=self.args.headers)
-        self.start_date = datetime.now()
+        elif self.args.raw_request is not None:
+            
+            raw_request_parsed = Raw_Request(self.args.raw_request, self.args.url_raw, self.args.force_ssl)
+            raw_request_parsed.parse_raw_request()
+            raw_request_parsed.build_url()
+
+            print(raw_request_parsed)
+
+            self.args.method, self.args.url, self.args.headers, self.args.data = \
+                 raw_request_parsed.method, raw_request_parsed.url, raw_request_parsed.headers, raw_request_parsed.data
+
+            self.requests = Requests(
+                    method=self.args.method, 
+                    timeout=self.args.timeout, 
+                    throttle=self.args.throttle, 
+                    allow_redirects=self.args.allow_redirects, 
+                    verify_ssl=self.args.verify_ssl, 
+                    retry=self.args.retry,
+                    headers=self.args.headers)
 
     def gen_wordlist(self):
         if self.args.payload is not None:
