@@ -1,10 +1,12 @@
+from curses import raw
+from email.mime import base
 import requests
 import time
 
 from .printing import print, log, Colors, Strings
 
 class Request():
-    def __init__(self, url, data:str()="", headers: dict()={}, method="GET", parameter="", placeholder="§", place="url"):
+    def __init__(self, url, data:str()="", headers: dict()={}, method="GET", parameter="", placeholder="§", place=["url"]):
         self.url = url
         self.data = data
         self.headers = headers
@@ -15,16 +17,24 @@ class Request():
         self.fill_placeholders()
     
     def fill_placeholders(self,):
-        match self.place:
-            case ["url"]:
-                self.url = self.url.replace(self.placeholder, self.parameter)
-            case ["data"]:
-                self.data = self.data.replace(self.placeholder, self.parameter)
-            case ["headers"]:
-                for key, value in self.headers.items():
-                    # delete to avoid keeping the placeholder in every request
-                    del self.headers[key]
-                    self.headers[key.replace(self.placeholder, self.parameter)] = value.replace(self.placeholder, self.parameter)
+        if "raw" in self.place:
+            if self.placeholder in self.data:
+                self.place.append("data")
+            if self.placeholder in "".join([k+v for k,v in self.headers.items()]):
+                self.place.append("headers")
+            if self.placeholder in self.url:
+                self.place.append("url")
+            self.place.remove("raw")
+            self.place = list(set(self.place))
+        if "url" in self.place:
+            self.url = self.url.replace(self.placeholder, self.parameter)
+        if "data" in self.place:
+            self.data = self.data.replace(self.placeholder, self.parameter)
+        if "headers" in self.place:
+            new_headers = dict()
+            for key, value in self.headers.items():
+                new_headers[key.replace(self.placeholder, self.parameter)] = value.replace(self.placeholder, self.parameter)
+            self.headers = new_headers
 
 class Empty_response():
     status_code = 000
@@ -37,6 +47,66 @@ class Empty_response():
             return self.time
     elapsed = T()
 
+class Raw_Request():
+    def __init__(self, raw_request, base_url=None, force_ssl=False):
+        self.raw_request = raw_request
+        self.raw_request_splitted = self.raw_request.splitlines()
+        self.base_url = base_url
+        self.protocol = "http" if not force_ssl else "https"
+        self.force_ssl = force_ssl
+
+        self.method = str()
+        self.path = str()
+        self.version = str()
+        self.data = str()
+        self.headers = {}
+        self.url = str()
+    
+    def build_url(self):
+        print(self.base_url)
+        if self.base_url is None:
+            log("No base url provided, using the host header... in http mode (change the default mode to https with the flag --force-ssl)", type="debug")
+            if not "host" in self.headers.keys():
+                log(f"Could not retrive URL to run the tests against :( if you don't want to precise the \"Host\" header (for example, if you are fuzzing the Host header), use the -ur flag to set an url for the target (ie \"-ur http://site.com\")",type="fatal")
+                exit(1)
+            self.base_url = f"{self.protocol}://{self.headers['host']}"
+        else:
+            if self.base_url.endswith("/"):
+                self.base_url = self.base_url[:-1]
+            if self.base_url.startswith("http://") and self.force_ssl:
+                self.base_url= f"{self.protocol}{self.base_url[4:]}"
+        self.url = f"{self.base_url}{'/' if not self.path.startswith('/') else ''}{self.path}"
+
+    def parse_raw_request(self):
+        log(f"Parsing request provided.", type="info")
+        while len(self.raw_request_splitted[0]) == 0:
+            self.raw_request_splitted = self.raw_request_splitted[1:]
+        try:
+            self.method, self.path, self.version = self.raw_request_splitted[0].split(" ")
+            self.raw_request_splitted = self.raw_request_splitted[1:]
+        except:
+            log(f"Invalid http request ! first line {self.raw_request_splitted[0]} is invalid (not like {{method}} {{path}} {{version}}", type="fatal")
+            exit(1)
+        
+        while len(self.raw_request_splitted) > 0 and len(self.raw_request_splitted[0]) > 0:
+            try:
+                k,v = self.raw_request_splitted[0].split(": ")
+            except:
+                log(f"Invalid header format ! {self.raw_request_splitted[0]} is invalid (not like {{key}}: {{value}}]",type="fatal")
+                exit(1)
+            self.headers[k.lower()] = v
+            self.raw_request_splitted = self.raw_request_splitted[1:]
+        
+        while len(self.raw_request_splitted) > 0:
+            if len(self.raw_request_splitted[0]) == 0:
+                self.raw_request_splitted = self.raw_request_splitted[1:]
+                continue
+            if len(self.raw_request_splitted[0]) > 0:
+                self.data = "\n".join(self.raw_request_splitted)
+                break
+    
+    def __str__(self):
+        return f"""{self.method}\n{self.url}\n{self.headers}\n{self.data}"""
 
 class Requests():
 
@@ -86,12 +156,12 @@ class Requests():
         """
         method = self.method if not method else method
         if method == "GET":
-            return self.get_(url, payload, headers)
+            return self.get_(url, payload, data, headers)
         if method == "POST":
             return self.post_(url, data, payload, headers)
 
 
-    def get_(self, url, parameter, headers={}):
+    def get_(self, url, parameter, data=None, headers={}):
         """
         Do a GET request in the session object
         check if we timeout or if we have a status 429 (rate limit reached)
@@ -105,7 +175,7 @@ class Requests():
         retry = True
 
         try:
-            req = self.session.get(url, timeout=self.timeout, allow_redirects=self.allow_redirects,
+            req = self.session.get(url, data=data, timeout=self.timeout, allow_redirects=self.allow_redirects,
                     verify=self.verify_ssl, headers=self.headers)
             if req.status_code == 429:
                 log(
@@ -116,7 +186,7 @@ class Requests():
             req = None
             if self.retry and retry:
                 try:
-                    req = self.session.get(url, timeout=self.timeout, allow_redirects=self.allow_redirects,
+                    req = self.session.get(url, data=data, timeout=self.timeout, allow_redirects=self.allow_redirects,
                             verify=self.verify_ssl, headers=self.headers)
                     if req.status_code == 429:
                         log(
