@@ -36,7 +36,7 @@ class Request():
             for key, value in self.headers.items():
                 new_headers[key.replace(self.placeholder, self.parameter)] = value.replace(self.placeholder, self.parameter)
             self.headers = new_headers
-            print(self.headers)
+        print(self.place)
 
 class Empty_response():
     status_code = 000
@@ -121,7 +121,7 @@ class Requests():
         self.throttle = throttle
         self.allow_redirects = allow_redirects
         self.verify_ssl = verify_ssl
-        # self.headers.update({k.lower(): v for k,v in headers.items()})
+        self.headers.update({k.lower(): v for k,v in headers.items()})
 
         self.errors_count = 0
         self.retry_count = 0

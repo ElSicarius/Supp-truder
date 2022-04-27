@@ -295,11 +295,13 @@ class Fuzzer():
             raw_request_parsed = Raw_Request(self.args.raw_request, self.args.url_raw, self.args.force_ssl)
             raw_request_parsed.parse_raw_request()
             raw_request_parsed.build_url()
-
-            print(raw_request_parsed)
-
-            self.args.method, self.args.url, self.args.headers, self.args.data = \
+            method, url, headers, data = \
                  raw_request_parsed.method, raw_request_parsed.url, raw_request_parsed.headers, raw_request_parsed.data
+            
+            self.args.method = method
+            self.args.url = url
+            self.args.headers.update(headers)
+            self.args.data = data
 
             self.requests = Requests(
                     method=self.args.method, 
@@ -308,7 +310,7 @@ class Fuzzer():
                     allow_redirects=self.args.allow_redirects, 
                     verify_ssl=self.args.verify_ssl, 
                     retry=self.args.retry,
-                    headers=self.args.headers)
+                    headers={k: v for k,v in self.args.headers.items() if not self.args.placeholder in v and not self.args.placeholder in k})
 
     def gen_wordlist(self):
         if self.args.payload is not None:
