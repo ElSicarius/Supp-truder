@@ -53,6 +53,7 @@ class Arguments():
         parser.add_argument("-X", "--method", default="GET", help="HTTP method to use")
         parser.add_argument("-f", "--filter", help="Filter positives match with httpcode,to exclude one, prefix \"n\", examples: -f n204 -f n403", action="append", default=[])
         parser.add_argument("-T", "--tamper",help="Use tamper scripts located in the tamper directory (you can make your own)", default=None)
+        parser.add_argument("-ut", "--untamper",help="Unprocess tampered payload to see what is the real payload unprocessed", default=False, action="store_true")
         parser.add_argument("-tf", "--time-filter",help='Specify the time range that we\'ll use to accept responses (format: >3000 or <3000 or =3000 or >=3000 or <=3000', action="append", default=[])
 
         parser.add_argument("-lf", "--length-filter",help='Specify the length range that we\'ll use to accept responses (format: >3000 or <3000 or =3000 or >=3000 or <=3000', action="append", default=[])
@@ -233,6 +234,23 @@ class Wordlist():
         self.payload_list = [x[1] for x in modified_payload_list]
         self.old_payload_list = modified_payload_list
     
+    def unapply_tamper(self, payload):
+        
+        try:
+            if not "unprocess" in dir(self.tamper):
+                log(f"To use untamper functionnality, you need a function 'unprocess' in your tamper script !", type="fatal")
+                exit(1)
+            tempo = self.tamper.unprocess(payload)
+            if isinstance(tempo, bytes):
+                log(f"Your tamper script should only return string and not bytes ! can't continue...", type="critical")
+                log(f"It translates {payload} to -> {tempo}", type="debug")
+                exit(1)
+            return tempo
+        except Exception as e:
+            log(f"An exception occured in your tamper script ! Below is the stack trace of your script.", type="critical")
+            log(f"Error: {e}", type="debug")
+            exit(1)
+    
     def shuffle_payloads(self):
         log("[*] Shuffling payloads", type="info")
         self.payload_list = self.payload_list
@@ -377,6 +395,9 @@ class Fuzzer():
         self.print(1, Strings.results_header, color="white")
         responses = self.intruder.start_requests()
         for status, response, parameter in responses:
+            parameter_print = parameter
+            if self.args.untamper:
+                parameter_print = self.wordlist.unapply_tamper(parameter)
             if status:
                 if response is None:
                     response = Empty_response()
@@ -387,7 +408,7 @@ class Fuzzer():
                     status=response.status_code,
                     length=len(response.text),
                     response_time=f"{response.elapsed.total_seconds():.6f}",
-                    payload=parameter),
+                    payload=parameter_print),
                         color=self.intruder.requests.color_status_code(response))
                 continue
             self.print(1, Strings.results.format(
@@ -397,7 +418,7 @@ class Fuzzer():
                     status=response.status_code,
                     length=len(response.text),
                     response_time=f"{response.elapsed.total_seconds():.6f}",
-                    payload=parameter),
+                    payload=parameter_print),
                         color=self.intruder.requests.color_status_code(response), end=f"{' '*os.get_terminal_size()[1]}\r")
     
     def print(self, verbosity=0, *args, **kwargs):
