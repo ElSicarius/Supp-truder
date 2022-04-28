@@ -147,21 +147,21 @@ class Requests():
         urllib3.disable_warnings()
     
     def request_object_handler(self, req):
-        return self.request_handler(req.url, req.parameter, req.data, req.method, req.headers)
+        return self.request_handler(req.url, req.data, req.method, req.headers)
     
-    def request_handler(self, url, payload, data=None, method=None, headers={}):
+    def request_handler(self, url, data=None, method=None, headers={}):
         """
         Do a GET or a POST depending on the method set in settings (can be overrite with the method argument)
         :returns the requests.response object
         """
         method = self.method if not method else method
         if method == "GET":
-            return self.get_(url, payload, data, headers)
+            return self.get_(url, data, headers)
         if method == "POST":
-            return self.post_(url, data, payload, headers)
+            return self.post_(url, data, headers)
 
 
-    def get_(self, url, parameter, data=None, headers={}):
+    def get_(self, url, data=None, headers={}):
         """
         Do a GET request in the session object
         check if we timeout or if we have a status 429 (rate limit reached)
@@ -196,10 +196,10 @@ class Requests():
                     req = None
 
                     retry = False
-        return (req, parameter)
+        return req
 
 
-    def post_(self, url, data, parameter, headers={}):
+    def post_(self, url, data, headers={}):
         """
         Do a POST request in the session object
         check if we timeout or if we have a status 429 (rate limit reached)
@@ -235,4 +235,4 @@ class Requests():
                     req = None
 
                     retry = False
-        return (req, parameter)
+        return req

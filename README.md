@@ -157,7 +157,28 @@ The "-b" option defines the default payload to generate the base request
 
 The -B option enables the base request feature
 
+You can tweak the parameters to do things like:
+-m Match exacty the base request
+
+-mh Match also the headers, so you can detect changes in some headers like for example a "set-cookie"
+-eh Exclude a header to the -mh option: for instance, to reduce the risk of getting false positives, you can exclude the "x-CSRF" or "Date"
+
 That's it !
+
+## Fuzzing recursive
+So you have a timebased injection or a boolean based injection (Ldap/SQL/whatever). You re planning to create a script designed to fuzz this specific endpoint ? just don't :) here is how:
+
+In this example, we are in a ldap injection, in the field "password". We know that this password is based on the chars a-Z 0-9 and {}-_ 
+
+I'm using the negative match against a base request, which means I'm matching everything that does **not** looks like the base request, headers included (-mt, except the headers "Date" and "CSRF" with option -eh)
+
+Then i'm activating the fuzz recursive, with a spacer null between matches ( option "--fuzz-recursive-separator" defaults to "", if you set it to "," for example, all the positive matches will be joined around the "," character). 
+Finally, the --fuzz-recursive-position defines where we append the payload for the next payloads (example, <found payload><separator><next payload> for prefix or <next payload><separator><found payload> for suffix)
+
+Command:
+```bash
+python3 supptruder.py -u "http://127.0.0.1:31145/login" -R "[a-zA-Z\d\{\}\_\-]" -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "username=admin&password=§*" -B -mh -eh Date -eh "CSRF" --fuzz-recursive --fuzz-recursive-separator "" --fuzz-recursive-position "prefix" 
+```
 
 ## Misc
 So, in this case, you have a complex request with a ton of cookies and headers, and a huge data set. You can easily create a super complex command ans use it, or you can simply dump the request into a file, and process it with -r.

@@ -33,6 +33,10 @@ class Arguments():
         parser.add_argument("-S", "--placeholder", default="§")
         parser.add_argument("--force-ssl", default=False, help="Force https when using raw-request", action="store_true")
         parser.add_argument("-ur", "--url-raw", default=None, help="Force usage of a specific URL to make the raw request. Default: Using the Host header")
+        parser.add_argument("--fuzz-recursive", action="store_true", default=False, help="Fuzz recursively by appending positive results to 'prefix' or 'suffix' and starting over (useful when doing timebased things/boolean based things)")
+        parser.add_argument("--fuzz-recursive-position", default="prefix", choices=["prefix","suffix"], help="Select the position where the matching payload will be appended")
+        parser.add_argument("--fuzz-recursive-separator", default="", help="Set a character/string beteen positive recursive matches")
+
 
 
         # tool settings
@@ -66,6 +70,9 @@ class Arguments():
         parser.add_argument("-textd", "--text-difference-ratio", default=0.98, type=float, help="Define a text difference where base_request.text will not be equal to the current_request.text, ie base_request matches current_request at 98%%, they are different until time_different>=0.98")
         parser.add_argument("--ratio-type", default="quick", help="Use a quick ratio of a normal one, quick is faster, normal is for very short pages")
         parser.add_argument("-m", '--match-base-request',action="store_true", default=False, help="Match the base request to find pages identical to your base payload")
+        parser.add_argument('-mh', "--match-headers",help="Extends the match algorithm to the headers", default=False, action="store_true")
+        parser.add_argument('-eh', "--exclude-headers",help="Exclude a header while extending the match algorithm to the headers", default=[], action="append")
+
 
         # parser.add_argument('-o', '--dumpHtml', help='file to dump html content')
         # parser.add_argument("-q", "--quiet", help="tell the program to output only the results",
@@ -197,9 +204,9 @@ class Wordlist():
         self.suffix = suffix
         self.payload_list = list()
     
-    def gen_wordlist_iterator(self):
+    def gen_wordlist_iterator(self, recursive_prefix=[], recursive_suffix=[], recursive_separator=""):
         for payload in self.payload_list:
-            yield f"{self.prefix}{payload}{self.suffix}"
+            yield payload, f"{self.prefix}{recursive_separator.join(recursive_prefix)}{recursive_separator}{payload}{recursive_separator}{recursive_separator.join(recursive_suffix)}{self.suffix}"
     
     def get_distant_payload(self):
         try:
@@ -357,7 +364,7 @@ class Fuzzer():
     def prepare(self):
         self.print(1, Strings.banner, color="yellow")
         self.gen_wordlist()
-        self.intruder = Intruder(self.args, self.arguments_object.place, self.wordlist.gen_wordlist_iterator())
+        self.intruder = Intruder(self.args, self.arguments_object.place, self.wordlist)
         if self.args.use_base_request:
             log(f"[+] Requesting base request", type="info")
             self.intruder.do_base_request()
@@ -394,8 +401,8 @@ class Fuzzer():
 
         self.print(1, Strings.results_header, color="white")
         responses = self.intruder.start_requests()
-        for status, response, parameter in responses:
-            parameter_print = parameter
+        for status, response, parameter, full_payload in responses:
+            parameter_print = full_payload
             if self.args.untamper:
                 parameter_print = self.wordlist.unapply_tamper(parameter)
             if status:
