@@ -1,14 +1,17 @@
 
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED, CancelledError, thread
+from email.mime import base
 from .http import Requests, Request
 from .printing import log
 from .differs import Differs
 
 class Intruder():
-    def __init__(self, args, place, wordlist_generator):
+    def __init__(self, args, place, wordlist):
         self.args = args
         self.place = place
-        self.wordlist_generator = wordlist_generator
+        self.wordlist = wordlist
+        self.recursive_prefix = []
+        self.recursive_suffix = []
         self.requests = Requests( method=args.method, 
                                 timeout=args.timeout, 
                                 throttle=args.throttle, 
@@ -118,14 +121,14 @@ class Intruder():
                 return True
         return False
 
-    def prepare_request_and_send(self, parameter):
-        req = Request(self.args.url, self.args.data, self.args.headers, self.args.method, parameter, self.args.placeholder, self.place)
-        return self.do_request(req)
+    def prepare_request_and_send(self, payload, base_payload):
+        req = Request(self.args.url, self.args.data, self.args.headers, self.args.method, payload, self.args.placeholder, self.place)
+        return base_payload, payload, self.do_request(req)
     
     def do_base_request(self):
         dummy_parameter = self.args.base_payload
         req = Request(self.args.url, self.args.data, self.args.headers, self.args.method, self.args.base_payload, self.args.placeholder, self.place)
-        self.base_request = self.do_request(req)[0]
+        self.base_request = self.do_request(req)
         self.difflib = Differs(self.args.base_payload, self.args.time_difference, self.args.text_difference_ratio, self.args.ratio_type)
         return self.base_request
 
@@ -134,43 +137,57 @@ class Intruder():
 
     def start_requests(self):
         executor = ThreadPoolExecutor(max_workers=self.args.threads)
-        self.futures.update({executor.submit(self.prepare_request_and_send, p) for p in self.wordlist_generator})
+        self.futures.update({executor.submit(self.prepare_request_and_send, p, base_payload) for base_payload,p in self.wordlist.gen_wordlist_iterator()})
         while self.futures:
             done, self.futures = wait(self.futures, return_when=FIRST_COMPLETED)
             for futu in done:
-                response, parameter = futu.result()
+                base_payload, full_payload, response = futu.result()
                 if response is None:
-                    log(f"A problem occured while fetching the link, your internet might be broken. param: {parameter}", type="critical")
+                    log(f"A problem occured while fetching the link, your internet might be broken. param: {base_payload}", type="critical")
                     # Accept response
-                    yield True, response, parameter
+                    if self.args.fuzz_recursive:
+                        if self.args.fuzz_recursive_position == "prefix":
+                            self.recursive_prefix.append(base_payload)
+                        else:
+                            self.recursive_suffix.append(base_payload)
+                        self.futures.update({executor.submit(self.prepare_request_and_send, p, base_payload) for base_payload,p in self.wordlist.gen_wordlist_iterator(self.recursive_prefix, self.recursive_suffix, self.args.fuzz_recursive_separator)})
+                    yield True, response, base_payload, full_payload
                     continue
                 
                 # Base request checks
                 if self.args.use_base_request:
                     if self.base_request is not None:
-                        identical = self.difflib.is_identical(self.base_request, response, parameter)
+                        identical = self.difflib.is_identical(self.base_request, response, base_payload, self.args.match_headers, self.args.exclude_headers)
                         if identical:
                             if not self.args.match_base_request:
-                                yield False, response, parameter
+                                yield False, response, base_payload, full_payload
                                 continue
                         else:
                             if self.args.match_base_request:
-                                yield False, response, parameter
+                                yield False, response, base_payload, full_payload
                                 continue
 
 
                 # FILTERS CHECKS
                 if not self.is_status_code_in_specs(response.status_code):
                     # reject response
-                    yield False, response, parameter
+                    yield False, response, base_payload, full_payload
                     continue
                 if not self.is_response_time_in_specs(response.elapsed.total_seconds()):
                     # reject response
-                    yield False, response, parameter
+                    yield False, response, base_payload, full_payload
                     continue
                 if not self.is_response_len_specs(len(response.text)):
                     # reject response
-                    yield False, response, parameter
+                    yield False, response, base_payload, full_payload
                     continue
                 # Accept response
-                yield True, response, parameter
+                if self.args.fuzz_recursive:
+                
+                    if self.args.fuzz_recursive_position == "prefix":
+                        self.recursive_prefix.append(base_payload)
+                    else:
+                        self.recursive_suffix.append(base_payload)
+                    self.futures.update({executor.submit(self.prepare_request_and_send, p, base_payload) for base_payload,p in self.wordlist.gen_wordlist_iterator(self.recursive_prefix, self.recursive_suffix, self.args.fuzz_recursive_separator)})
+                yield True, response, base_payload, full_payload
+                
