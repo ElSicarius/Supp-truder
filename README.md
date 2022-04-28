@@ -195,6 +195,118 @@ Command:
 python3 supptruder.py -r request_file.txt -ur https://site.com/ -p database/vhosts.txt -H "Host: §"
 ```
 
+# Usage (from --help)
+
+```
+usage: supptruder.py [-h] [-u URL] [-r RAW_REQUEST] [-d DATA] [-H HEADERS]
+                     [-S PLACEHOLDER] [--force-ssl] [-ur URL_RAW]
+                     [--fuzz-recursive]
+                     [--fuzz-recursive-position {prefix,suffix}]
+                     [--fuzz-recursive-separator FUZZ_RECURSIVE_SEPARATOR]
+                     [--shuffle] [-v] [-t THREADS] [--throttle THROTTLE] [-re]
+                     [-P DISTANT_PAYLOAD] [-R REGEX_PAYLOAD] [-p PAYLOAD]
+                     [--prefix PREFIX] [--suffix SUFFIX] [--offset OFFSET]
+                     [--timeout TIMEOUT] [--retry] [--verify-ssl] [-X METHOD]
+                     [-f FILTER] [-T TAMPER] [-ut] [-tf TIME_FILTER]
+                     [-lf LENGTH_FILTER] [-B] [-b BASE_PAYLOAD]
+                     [--ignore-base-request] [-timed TIME_DIFFERENCE]
+                     [-textd TEXT_DIFFERENCE_RATIO] [--ratio-type RATIO_TYPE]
+                     [-m] [-mh] [-eh EXCLUDE_HEADERS]
+
+~~~~~~~~~~ WASSUP Truder ?? ~~~~~~~~~~
+
+options:
+  -h, --help            show this help message and exit
+  -u URL, --url URL     Url to test
+  -r RAW_REQUEST, --raw-request RAW_REQUEST
+                        Raw request prepared with the placeholder
+  -d DATA, --data DATA  Add POST data
+  -H HEADERS, --headers HEADERS
+                        Add extra Headers (syntax: -H "test: test" -H "test2:
+                        test3")
+  -S PLACEHOLDER, --placeholder PLACEHOLDER
+  --force-ssl           Force https when using raw-request
+  -ur URL_RAW, --url-raw URL_RAW
+                        Force usage of a specific URL to make the raw request.
+                        Default: Using the Host header
+  --fuzz-recursive      Fuzz recursively by appending positive results to
+                        'prefix' or 'suffix' and starting over (useful when
+                        doing timebased things/boolean based things)
+  --fuzz-recursive-position {prefix,suffix}
+                        Select the position where the matching payload will be
+                        appended
+  --fuzz-recursive-separator FUZZ_RECURSIVE_SEPARATOR
+                        Set a character/string beteen positive recursive
+                        matches
+  --shuffle             Shuffle the payload list
+  -v, --verbosity       verbosity level (3 levels available)
+  -t THREADS, --threads THREADS
+                        number of threads to use, default 10
+  --throttle THROTTLE   throttle between the requests, default 0.0
+  -re, --allow-redirects
+                        Allow HTTP redirects
+  -P DISTANT_PAYLOAD, --distant-payload DISTANT_PAYLOAD
+                        use an online wordlist instead of a local one (do not
+                        use if your internet connection is shit, or the
+                        wordlist weight is like To)
+  -R REGEX_PAYLOAD, --regex-payload REGEX_PAYLOAD
+                        use a regex to create your payload list
+  -p PAYLOAD, --payload PAYLOAD
+                        payload file
+  --prefix PREFIX       Prefix for all elements of the wordlist
+  --suffix SUFFIX       Suffix for all elements of the wordlist
+  --offset OFFSET       Offset to start from in the wordlist
+  --timeout TIMEOUT
+  --retry
+  --verify-ssl
+  -X METHOD, --method METHOD
+                        HTTP method to use
+  -f FILTER, --filter FILTER
+                        Filter positives match with httpcode,to exclude one,
+                        prefix "n", examples: -f n204 -f n403
+  -T TAMPER, --tamper TAMPER
+                        Use tamper scripts located in the tamper directory
+                        (you can make your own)
+  -ut, --untamper       Unprocess tampered payload to see what is the real
+                        payload unprocessed
+  -tf TIME_FILTER, --time-filter TIME_FILTER
+                        Specify the time range that we'll use to accept
+                        responses (format: >3000 or <3000 or =3000 or >=3000
+                        or <=3000
+  -lf LENGTH_FILTER, --length-filter LENGTH_FILTER
+                        Specify the length range that we'll use to accept
+                        responses (format: >3000 or <3000 or =3000 or >=3000
+                        or <=3000
+  -B, --use-base-request
+                        Use the strategy to compare responses agains a base
+                        request to reduce noise
+  -b BASE_PAYLOAD, --base-payload BASE_PAYLOAD
+                        Payload for base request
+  --ignore-base-request
+                        Force testing even if base request failed
+  -timed TIME_DIFFERENCE, --time-difference TIME_DIFFERENCE
+                        Define a time difference where base_request will not
+                        be equal to the current_request, ie base request took
+                        1 second and current took 2 seconds, they are
+                        different until time_different>=1
+  -textd TEXT_DIFFERENCE_RATIO, --text-difference-ratio TEXT_DIFFERENCE_RATIO
+                        Define a text difference where base_request.text will
+                        not be equal to the current_request.text, ie
+                        base_request matches current_request at 98%, they are
+                        different until time_different>=0.98
+  --ratio-type RATIO_TYPE
+                        Use a quick ratio of a normal one, quick is faster,
+                        normal is for very short pages
+  -m, --match-base-request
+                        Match the base request to find pages identical to your
+                        base payload
+  -mh, --match-headers  Extends the match algorithm to the headers
+  -eh EXCLUDE_HEADERS, --exclude-headers EXCLUDE_HEADERS
+                        Exclude a header while extending the match algorithm
+                        to the headers
+
+```
+
 # Todo
 - Add Tampers scripts
 - Use the verbosity system
