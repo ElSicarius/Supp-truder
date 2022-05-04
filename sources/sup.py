@@ -216,7 +216,7 @@ class Wordlist():
     
     def gen_wordlist_iterator(self, recursive_prefix=[], recursive_suffix=[], recursive_separator=""):
         for payload in self.payload_list:
-            yield payload, f"{self.prefix}{recursive_separator.join(recursive_prefix)}{recursive_separator}{payload}{recursive_separator}{recursive_separator.join(recursive_suffix)}{self.suffix}"
+            yield payload, self.apply_tamper(f"{self.prefix}{recursive_separator.join(recursive_prefix)}{recursive_separator}{payload}{recursive_separator}{recursive_separator.join(recursive_suffix)}{self.suffix}")
     
     def get_distant_payload(self):
         try:
@@ -234,25 +234,22 @@ class Wordlist():
         with open(self.link, "r") as f:
             self.payload_list = f.read().splitlines()[self.offset:]
         
-    def apply_tamper(self):
-        modified_payload_list = list()
-        for payload in self.payload_list:
-            tempo = payload
-            for tamper in self.tampers:
-                try:
-                    tempo = tamper.process(tempo)
-                    if isinstance(tempo, bytes):
-                        log(f"Your tamper script should only return string and not bytes ! can't continue...", type="critical")
-                        log(f"It translates {payload} to -> {tempo}", type="debug")
-                        exit(1)
-                except Exception as e:
-                    log(f"An exception occured in your tamper script ! Below is the stack trace of your script.", type="critical")
-                    log(f"Error: {e}", type="debug")
+    def apply_tamper(self, payload):
+        if self.tampers is None or len(self.tampers) < 0:
+            return payload
+        tempo = payload
+        for tamper in self.tampers:
+            try:
+                tempo = tamper.process(tempo)
+                if isinstance(tempo, bytes):
+                    log(f"Your tamper script should only return string and not bytes ! can't continue...", type="critical")
+                    log(f"It translates {payload} to -> {tempo}", type="debug")
                     exit(1)
-            modified_payload_list.append((payload, tempo))
-
-        self.payload_list = [x[1] for x in modified_payload_list]
-        self.old_payload_list = modified_payload_list
+            except Exception as e:
+                log(f"An exception occured in your tamper script ! Below is the stack trace of your script.", type="critical")
+                log(f"Error: {e}", type="debug")
+                exit(1)
+        return tempo
     
     def unapply_tamper(self, payload):
         tempo = payload
@@ -268,7 +265,7 @@ class Wordlist():
                     exit(1)
                 
             except Exception as e:
-                log(f"An exception occured in your tamper script ! Below is the stack trace of your script.", type="critical")
+                log(f"An exception occured in your tamper script \"{tamper}\"! Below is the stack trace of your script.", type="critical")
                 log(f"Error: {e}", type="debug")
                 exit(1)
         return tempo
@@ -305,9 +302,6 @@ class Wordlist():
         
         if self.shuffle:
             self.shuffle_payloads()
-        
-        if self.tampers and len(self.tampers) > 0:
-            self.apply_tamper()
         
         self.max_len_payload = len(max(self.payload_list, key=len))
 
@@ -419,7 +413,7 @@ class Fuzzer():
         for status, response, parameter, full_payload in responses:
             parameter_print = full_payload
             if self.args.untamper:
-                parameter_print = self.wordlist.unapply_tamper(parameter)
+                parameter_print = self.wordlist.unapply_tamper(full_payload)
             if status:
                 if response is None:
                     response = Empty_response()

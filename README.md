@@ -49,7 +49,9 @@ This is where you can see what the tool is capable of, I'm going to define a use
 
 -B -> Makes a base request and matches the responses that does not "look like" the base request (or in the other way with the parameter -m, ie match a very specific response)
 
--T -> use a "tamper" script that will do some pre-processing to your payload !
+-T -> use a "tamper" script that will do some pre-processing to your payload !. You can chain them by specifying a chain like: -T base64 -T urlEncode.
+
+-ut -> undo tampering for printing purposes (you can see what payload you're sending to the target).
 
 -r -> Load a file containing a simple request (GET or POST), then you can eather put your placeholder in the file. if you combine it with -H you can add/overwrite headers, if you add -d, you'll overwrite the POST data.
 
@@ -110,6 +112,21 @@ python3 supptruder -u "https://site.com/index.php?userid=§" -R "U[\d]{4}"
 That's it !!
 
 ## Payload tampering
+
+### Multitampering
+
+By default, you can use a many tampers as you want. By specifying a chain of tampers, you can use them multiple times.
+Consider the following url: `https://site.com/index.php?image_favicon=<urlencode of the base64 encoded string of the urlEncoded payload: "/images/favicon.ico">`
+an example of url would be like: `https://site.com/index.php?image_favicon=JTJGaW1hZ2VzJTJGZmF2aWNvbg%3D%3D`
+
+You have to fuzz all the paths available in your wordlist "raft_medium.txt" but you're too lazy to encode all of them by hand, 3 times. So you can do:
+
+Command: 
+```bash
+python3 supptruder.py -u "https://site.com/index.php?image_favicon=§" -p database/path_medium_raft.txt -T urlEncode -T base64 -T urlencode
+```
+This would execute the tampers in the order you gave them: first **URL encode** the payload, then **base64 encode** it, then **URL Encode** again.
+
 ### Base64 encoding 
 Lets start with something simple: Consider the following url: `https://site.com/index.php?image_favicon=<base64 encoded string of "/images/favicon.ico">`
 
