@@ -56,10 +56,10 @@ class Arguments():
         parser.add_argument("--verify-ssl", default=False, action="store_true")
         parser.add_argument("-X", "--method", default="GET", help="HTTP method to use")
         parser.add_argument("-f", "--filter", help="Filter positives match with httpcode,to exclude one, prefix \"n\", examples: -f n204 -f n403", action="append", default=[])
-        parser.add_argument("-T", "--tamper",help="Use tamper scripts located in the tamper directory (you can make your own)", default=None)
+        parser.add_argument("-T", "--tamper",help="Use tamper scripts located in the tamper directory (you can make your own), ou can also chain them (processed in the order)", default=[], action="append")
         parser.add_argument("-ut", "--untamper",help="Unprocess tampered payload to see what is the real payload unprocessed", default=False, action="store_true")
         parser.add_argument("-tf", "--time-filter",help='Specify the time range that we\'ll use to accept responses (format: >3000 or <3000 or =3000 or >=3000 or <=3000', action="append", default=[])
-
+ 
         parser.add_argument("-lf", "--length-filter",help='Specify the length range that we\'ll use to accept responses (format: >3000 or <3000 or =3000 or >=3000 or <=3000', action="append", default=[])
         
         # base request stuff
@@ -87,13 +87,18 @@ class Arguments():
         if self.args.url is None and self.args.raw_request is None:
             log("[!] You must specify a url to test (-u) or a request file (-r) !", type="fatal")
             exit(1)
+
         if self.args.payload is None and self.args.regex_payload is None and self.args.distant_payload is None:
             log("[!] You must specify a payload file (-p) or a regex (-R) or a distant payload (-P) !", type="fatal")
             exit(1)
-        if self.args.tamper:
-            self.tamper = self.args.tamper
-            self.args.tamper = self.load_tamper(self.args.tamper)
-            self.check_tamper()
+        self.tampers = None
+        if len(self.args.tamper) > 0:
+            self.tampers = []
+            for tamper in self.args.tamper:
+                loaded = self.load_tamper(tamper)
+                self.tampers.append(loaded)
+                self.check_tamper(loaded)
+            
         if self.args.raw_request is not None:
             try:
                 with open(self.args.raw_request) as f:
@@ -153,6 +158,10 @@ class Arguments():
             return sys.modules[module_path]
         try:
             load = __import__(module_path, fromlist=[module])
+        except ModuleNotFoundError:
+            log(f"Could not find the module \"{module}\" !", type="fatal")
+            log(f"Here is the list of available modules: {', '.join([x[:-3] for x in os.listdir('tampers/') if x.endswith('.py')])}", type="debug")
+            exit(1)
         except Exception as e:
             log(f"Failed to load the module {module}, please make sure you've put it in the tampers directory", type="critical")
             log(f"Here is your stacktrace: {e}", type="debug")
@@ -174,10 +183,10 @@ class Arguments():
                     headers_temp[header] = str()
         self.args.headers = headers_temp
     
-    def check_tamper(self):
+    def check_tamper(self, tamper):
         try:
-            dummyCheck = self.args.tamper.process("Th1Is@NiceDummyCheck")
-            log(f"[*] Dummy check for the tamper module loaded: Th1Is@NiceDummyCheck -> {dummyCheck}", type="info")
+            dummyCheck = tamper.process("Th1s Is @ Nice DummyCheck …")
+            log(f"[*] Dummy check for the tamper module loaded: \"Th1s Is @ Nice DummyCheck …\" -> \"{dummyCheck}\"", type="debug")
             if isinstance(dummyCheck, bytes):
                 log(f"Your tamper script should only return string and not bytes ! can't continue...", type="error")
                 exit(1)
@@ -190,14 +199,15 @@ class Wordlist():
     def __init__(self, 
                     mode, 
                     link=None, 
-                    tamper=None, 
+                    tampers=None, 
                     shuffle=False, 
                     offset=0, 
                     prefix="", 
-                    suffix=""):
+                    suffix="",
+                    fallback=None):
         self.mode = mode
         self.link = link
-        self.tamper = tamper
+        self.tampers = tampers
         self.shuffle = shuffle
         self.offset = offset
         self.prefix = prefix
@@ -227,36 +237,41 @@ class Wordlist():
     def apply_tamper(self):
         modified_payload_list = list()
         for payload in self.payload_list:
-            try:
-                tempo = self.tamper.process(payload)
-                if isinstance(tempo, bytes):
-                    log(f"Your tamper script should only return string and not bytes ! can't continue...", type="critical")
-                    log(f"It translates {payload} to -> {tempo}", type="debug")
+            tempo = payload
+            for tamper in self.tampers:
+                try:
+                    tempo = tamper.process(tempo)
+                    if isinstance(tempo, bytes):
+                        log(f"Your tamper script should only return string and not bytes ! can't continue...", type="critical")
+                        log(f"It translates {payload} to -> {tempo}", type="debug")
+                        exit(1)
+                except Exception as e:
+                    log(f"An exception occured in your tamper script ! Below is the stack trace of your script.", type="critical")
+                    log(f"Error: {e}", type="debug")
                     exit(1)
-                modified_payload_list.append((payload, tempo))
-            except Exception as e:
-                log(f"An exception occured in your tamper script ! Below is the stack trace of your script.", type="critical")
-                log(f"Error: {e}", type="debug")
-                exit(1)
+            modified_payload_list.append((payload, tempo))
+
         self.payload_list = [x[1] for x in modified_payload_list]
         self.old_payload_list = modified_payload_list
     
     def unapply_tamper(self, payload):
-        
-        try:
-            if not "unprocess" in dir(self.tamper):
-                log(f"To use untamper functionnality, you need a function 'unprocess' in your tamper script !", type="fatal")
+        tempo = payload
+        for tamper in self.tampers[::-1]:
+            try:
+                if not "unprocess" in dir(tamper):
+                    log(f"To use untamper functionnality, you need a function 'unprocess' in your tamper script !", type="fatal")
+                    exit(1)
+                tempo = tamper.unprocess(tempo)
+                if isinstance(tempo, bytes):
+                    log(f"Your tamper script should only return string and not bytes ! can't continue...", type="critical")
+                    log(f"It translates {payload} to -> {tempo}", type="debug")
+                    exit(1)
+                
+            except Exception as e:
+                log(f"An exception occured in your tamper script ! Below is the stack trace of your script.", type="critical")
+                log(f"Error: {e}", type="debug")
                 exit(1)
-            tempo = self.tamper.unprocess(payload)
-            if isinstance(tempo, bytes):
-                log(f"Your tamper script should only return string and not bytes ! can't continue...", type="critical")
-                log(f"It translates {payload} to -> {tempo}", type="debug")
-                exit(1)
-            return tempo
-        except Exception as e:
-            log(f"An exception occured in your tamper script ! Below is the stack trace of your script.", type="critical")
-            log(f"Error: {e}", type="debug")
-            exit(1)
+        return tempo
     
     def shuffle_payloads(self):
         log("[*] Shuffling payloads", type="info")
@@ -291,7 +306,7 @@ class Wordlist():
         if self.shuffle:
             self.shuffle_payloads()
         
-        if self.tamper:
+        if self.tampers and len(self.tampers) > 0:
             self.apply_tamper()
         
         self.max_len_payload = len(max(self.payload_list, key=len))
@@ -353,7 +368,7 @@ class Fuzzer():
 
         self.wordlist = Wordlist(mode=mode, 
                                 link=link, 
-                                tamper=self.args.tamper, 
+                                tampers=self.arguments_object.tampers, 
                                 shuffle=self.args.shuffle, 
                                 offset=self.args.offset, 
                                 prefix=self.args.prefix, 
