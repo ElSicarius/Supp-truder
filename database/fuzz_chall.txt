@@ -1,0 +1,5 @@
+/www/index.html
+/etc/passwd
+/etc/hosts
+/var/log/nginx/access.log
+/var/log/nginx/error.log
