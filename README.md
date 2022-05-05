@@ -1,6 +1,8 @@
 # Supp'truder
 Wassupp' Truder ?
 
+/!\ Python 3.10 folks /!\
+
 # Idea
 
 This tool came from an idea I had while doing bugbounty. I was very dissapointed on the common tools used to fuzz the http protocol, and I wad tired of doing some bash kung-fu or firing burp each time I had to fuzz something needing some pre treatment.
