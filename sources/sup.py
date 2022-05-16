@@ -1,9 +1,6 @@
 
 
 import argparse
-from curses import raw
-from distutils.log import error
-from email.mime import base 
 import os
 import re
 import requests
@@ -11,8 +8,6 @@ from datetime import datetime
 import random 
 import signal
 import sys
-
-from loguru import logger
 
 from .printing import print, log, Strings
 from .http import Requests, Request, Empty_response, Raw_Request
@@ -424,7 +419,7 @@ class Fuzzer():
                     status=response.status_code,
                     length=len(response.text),
                     response_time=f"{response.elapsed.total_seconds():.6f}",
-                    payload=parameter_print),
+                    payload=parameter_print) + f"{' '*(os.get_terminal_size()[1]-len(full_payload))}",
                         color=self.intruder.requests.color_status_code(response))
                 continue
             self.print(1, Strings.results.format(

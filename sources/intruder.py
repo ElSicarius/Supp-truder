@@ -1,6 +1,5 @@
 
-from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED, CancelledError, thread
-from email.mime import base
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 from .http import Requests, Request
 from .printing import log
 from .differs import Differs
