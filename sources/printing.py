@@ -40,8 +40,8 @@ class Strings():
     banner = """~~~~~~~~~~~~ Supp' Truder ? ~~~~~~~~~~~~"""
     wordlist_loaded = "Wordlist loaded ! We have {payload_len} items in this wordlist !"
     results_header = f"Time\t\tPayload_index\tStatus\tLength\tResponse_time\tPayload\n{'-' * 100}"
-    results = "{time}\t{payload_index:0>6}/{payload_len}\t{status}\t{length}\t{response_time}\t{payload}"
-    base_request_details = """Status: {status},Content Length: {content_len},Request Time: {total_seconds},Request Text (trucated): {text_top}[...]{text_bottom}"""
+    results = "{time}\t{payload_index:0>6}/{payload_len}\t{status:0>3}\t{length:0>6}\t{response_time}\t{payload}    "
+    base_request_details = """Status: {status:0>3},Content Length: {content_len},Request Time: {total_seconds},Request Text (trucated): {text_top}[...]{text_bottom}"""
 
 
 def print(text, end="\n", color=None):
