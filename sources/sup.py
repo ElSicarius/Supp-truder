@@ -32,8 +32,6 @@ class Arguments():
         parser.add_argument("--fuzz-recursive-position", default="prefix", choices=["prefix","suffix"], help="Select the position where the matching payload will be appended")
         parser.add_argument("--fuzz-recursive-separator", default="", help="Set a character/string beteen positive recursive matches")
 
-
-
         # tool settings
         parser.add_argument("--shuffle", help="Shuffle the payload list", default=False, action="store_true")
         parser.add_argument('-v', '--verbosity', action='count', default=1, help='verbosity level (3 levels available)')

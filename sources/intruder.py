@@ -125,7 +125,6 @@ class Intruder():
         return base_payload, payload, self.do_request(req)
     
     def do_base_request(self):
-        dummy_parameter = self.args.base_payload
         req = Request(self.args.url, self.args.data, self.args.headers, self.args.method, self.args.base_payload, self.args.placeholder, self.place)
         self.base_request = self.do_request(req)
         self.difflib = Differs(self.args.base_payload, self.args.time_difference, self.args.text_difference_ratio, self.args.ratio_type)
@@ -142,7 +141,7 @@ class Intruder():
             for futu in done:
                 base_payload, full_payload, response = futu.result()
                 if response is None:
-                    log(f"A problem occured while fetching the link, your internet might be broken. param: {base_payload}", type="critical")
+                    #log(f"A problem occured while fetching the link, your internet might be broken. param: {base_payload}", type="critical")
                     # Accept response
                     if self.args.fuzz_recursive:
                         if self.args.fuzz_recursive_position == "prefix":
@@ -160,6 +159,9 @@ class Intruder():
                         if identical:
                             if not self.args.match_base_request:
                                 yield False, response, base_payload, full_payload
+                                continue
+                            else:
+                                yield True, response, base_payload, full_payload
                                 continue
                         else:
                             if self.args.match_base_request:
