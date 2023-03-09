@@ -181,7 +181,7 @@ class Requests():
                 log(
                     f"Rate limit reached, increase --throttle! Current is {self.throttle}", type="warning")
         except Exception as e:
-            print(f"HTTP Error: {e}")
+            #print(f"HTTP Error: {e}")
             self.errors_count += 1
             req = None
             if self.retry and retry:
