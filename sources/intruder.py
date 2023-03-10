@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 from .http import Requests, Request
 from .printing import log
 from .differs import Differs
+import re
 
 class Intruder():
     def __init__(self, args, place, wordlist):
@@ -119,6 +120,14 @@ class Intruder():
             if response_len > above:
                 return True
         return False
+    
+    def is_matching_regex_in_response(self, regex, response_content):
+        if regex is not None and len(regex) > 0:
+            regex = re.compile(regex, re.IGNORECASE)
+            matching = re.findall(regex, response_content)
+            if len(matching) > 0:
+                return matching
+        return False
 
     def prepare_request_and_send(self, payload, base_payload):
         req = Request(self.args.url, self.args.data, self.args.headers, self.args.method, payload, self.args.placeholder, self.place)
@@ -149,7 +158,7 @@ class Intruder():
                         else:
                             self.recursive_suffix.append(base_payload)
                         self.futures.update({executor.submit(self.prepare_request_and_send, p, base_payload) for base_payload,p in self.wordlist.gen_wordlist_iterator(self.recursive_prefix, self.recursive_suffix, self.args.fuzz_recursive_separator)})
-                    yield True, response, base_payload, full_payload
+                    yield True, response, base_payload, full_payload, ""
                     continue
                 
                 # Base request checks
@@ -158,30 +167,38 @@ class Intruder():
                         identical = self.difflib.is_identical(self.base_request, response, base_payload, self.args.match_headers, self.args.exclude_headers)
                         if identical:
                             if not self.args.match_base_request:
-                                yield False, response, base_payload, full_payload
+                                yield False, response, base_payload, full_payload, ""
                                 continue
                             else:
-                                yield True, response, base_payload, full_payload
+                                yield True, response, base_payload, full_payload, ""
                                 continue
                         else:
                             if self.args.match_base_request:
-                                yield False, response, base_payload, full_payload
+                                yield False, response, base_payload, full_payload, ""
                                 continue
 
 
                 # FILTERS CHECKS
                 if not self.is_status_code_in_specs(response.status_code):
                     # reject response
-                    yield False, response, base_payload, full_payload
+                    yield False, response, base_payload, full_payload, ""
                     continue
                 if not self.is_response_time_in_specs(response.elapsed.total_seconds()):
                     # reject response
-                    yield False, response, base_payload, full_payload
+                    yield False, response, base_payload, full_payload, ""
                     continue
                 if not self.is_response_len_specs(len(response.text)):
                     # reject response
-                    yield False, response, base_payload, full_payload
+                    yield False, response, base_payload, full_payload, ""
                     continue
+                # extract content
+                matching_regex = False
+                if len(self.args.match_regex) > 0:
+                    matching_regex = self.is_matching_regex_in_response( self.args.match_regex, response.text)
+                    if not matching_regex:
+                        # reject response
+                        yield False, response, base_payload, full_payload, ""
+                        continue
                 # Accept response
                 if self.args.fuzz_recursive:
                 
@@ -190,5 +207,5 @@ class Intruder():
                     else:
                         self.recursive_suffix.append(base_payload)
                     self.futures.update({executor.submit(self.prepare_request_and_send, p, base_payload) for base_payload,p in self.wordlist.gen_wordlist_iterator(self.recursive_prefix, self.recursive_suffix, self.args.fuzz_recursive_separator)})
-                yield True, response, base_payload, full_payload
+                yield True, response, base_payload, full_payload, matching_regex or ""
                 
