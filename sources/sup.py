@@ -52,8 +52,9 @@ class Arguments():
         parser.add_argument("-T", "--tamper",help="Use tamper scripts located in the tamper directory (you can make your own), ou can also chain them (processed in the order)", default=[], action="append")
         parser.add_argument("-ut", "--untamper",help="Unprocess tampered payload to see what is the real payload unprocessed", default=False, action="store_true")
         parser.add_argument("-tf", "--time-filter",help='Specify the time range that we\'ll use to accept responses (format: >3000 or <3000 or =3000 or >=3000 or <=3000', action="append", default=[])
- 
+
         parser.add_argument("-lf", "--length-filter",help='Specify the length range that we\'ll use to accept responses (format: >3000 or <3000 or =3000 or >=3000 or <=3000', action="append", default=[])
+        parser.add_argument("-mr", "--match-regex",help='Find a specific regex in the response', type=str, default=str())
         
         # base request stuff
         parser.add_argument("-B", "--use-base-request", help="Use the strategy to compare responses agains a base request to reduce noise",action="store_true", default=False)
@@ -361,10 +362,10 @@ class Fuzzer():
                                 prefix=self.args.prefix, 
                                 suffix=self.args.suffix)
         self.wordlist.load_wordlist()
-        self.print(1, Strings.wordlist_loaded.format(payload_len=len(self.wordlist.payload_list)), color="green")
+        self.print(2, Strings.wordlist_loaded.format(payload_len=len(self.wordlist.payload_list)), color="green")
 
     def prepare(self):
-        self.print(1, Strings.banner, color="yellow")
+        self.print(2, Strings.banner, color="yellow")
         self.gen_wordlist()
         self.intruder = Intruder(self.args, self.arguments_object.place, self.wordlist)
         if self.args.use_base_request:
@@ -385,7 +386,7 @@ class Fuzzer():
                 base_request_text_bottom = ""
 
 
-            self.print(1, Strings.base_request_details.format(
+            self.print(2, Strings.base_request_details.format(
                 status=self.intruder.base_request.status_code,
                 content_len=len(self.intruder.base_request.text),
                 total_seconds=self.intruder.base_request.elapsed.total_seconds(),
@@ -401,9 +402,9 @@ class Fuzzer():
             exit(1)
         signal.signal(signal.SIGINT, signal_handler)
 
-        self.print(1, Strings.results_header, color="white")
+        self.print(2, Strings.results_header, color="white")
         responses = self.intruder.start_requests()
-        for status, response, parameter, full_payload in responses:
+        for status, response, parameter, full_payload, extracted in responses:
             parameter_print = full_payload
             if self.args.untamper:
                 parameter_print = self.wordlist.unapply_tamper(full_payload)
@@ -417,21 +418,24 @@ class Fuzzer():
                     status=response.status_code,
                     length=len(response.text),
                     response_time=f"{response.elapsed.total_seconds():.6f}",
-                    payload=parameter_print) + f"{' '*(os.get_terminal_size()[1]-len(full_payload))}",
-                        color=self.intruder.requests.color_status_code(response))
+                    payload=parameter_print,
+                    extracted=extracted) + f"{' '*(os.get_terminal_size()[1]-len(full_payload))}",
+                    color=self.intruder.requests.color_status_code(response),
+                    )
                 continue
-            self.print(1, Strings.results.format(
+            self.print(2, Strings.results.format(
                     time=datetime.now().strftime("%H:%M:%S"),
                     payload_index=f"{self.wordlist.payload_list.index(parameter)}",
                     payload_len=len(self.wordlist.payload_list),
                     status=response.status_code,
                     length=len(response.text),
                     response_time=f"{response.elapsed.total_seconds():.6f}",
-                    payload=parameter_print),
-                        color=self.intruder.requests.color_status_code(response), end=f"{' '*os.get_terminal_size()[1]}\r")
+                    payload=parameter_print,
+                    extracted=extracted),
+                        color=self.intruder.requests.color_status_code(response), end=f"{' '*(os.get_terminal_size()[1]-3)}\r")
     
     def print(self, verbosity=0, *args, **kwargs):
-        if self.args.verbosity <= verbosity:
+        if (self.args.verbosity - 1) >= verbosity or self.args.verbosity == 1 :
             print(*args, **kwargs)
 
 def main():
